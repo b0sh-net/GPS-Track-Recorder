@@ -25,6 +25,20 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_TYPE_LOCATION"
+      ]
+    },
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Questa app ha bisogno di accedere alla tua posizione per registrare la traccia GPS.",
+        "NSLocationAlwaysUsageDescription": "Questa app ha bisogno di accedere alla tua posizione anche in background per registrare la traccia GPS completa."
+      }
     }
   }
 }
