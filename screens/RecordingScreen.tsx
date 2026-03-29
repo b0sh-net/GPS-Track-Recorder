@@ -5,12 +5,17 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import useTrackStore from '../hooks/useTrackStore';
 import { formatDuration } from '../lib/gpsUtils';
 
-export default function RecordingScreen() {
+type RecordingScreenProps = {
+  onStopRecording: () => void;
+};
+
+export default function RecordingScreen({ onStopRecording }: RecordingScreenProps) {
   const [startTime] = useState(Date.now());
   const { location, status, error } = useLocation();
   const {
@@ -41,13 +46,25 @@ export default function RecordingScreen() {
 
   const handleStopRecording = () => {
     console.log('Handle stop recording called');
-    // Navigazione verso SummaryScreen (gestita dal parent)
+    useTrackStore.getState().stopRecording();
+    onStopRecording();
   };
 
   const handleClear = () => {
-    if (confirm('Vuoi davvero cancellare la traccia corrente?')) {
-      clearWaypoints();
-    }
+    Alert.alert(
+      'Conferma cancellazione',
+      'Vuoi davvero cancellare la traccia corrente?',
+      [
+        {
+          text: 'Annulla',
+          style: 'cancel'
+        },
+        {
+          text: 'Cancella',
+          onPress: () => clearWaypoints()
+        }
+      ]
+    );
   };
 
   // Aggiorna waypoint quando riceve nuova posizione

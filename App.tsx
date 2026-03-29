@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from './screens/HomeScreen';
 import RecordingScreen from './screens/RecordingScreen';
@@ -43,7 +43,7 @@ export default function App() {
       <View style={styles.content}>
         {screen === 'home' && <HomeScreen onStartRecording={handleStartRecording} />}
         {screen === 'recording' && (
-          <RecordingScreen />
+          <RecordingScreen onStopRecording={handleStopRecording} />
         )}
         {screen === 'summary' && (
           <SummaryScreen onReset={handleReset} />

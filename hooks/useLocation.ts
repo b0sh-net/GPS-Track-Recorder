@@ -89,7 +89,7 @@ export function useLocation() {
         if (currentLocation) {
           if (isMounted) {
             console.log('useLocation - Timer update:', currentLocation);
-            setLocation(currentLocation);
+            setLocation(currentLocation.coords);
           }
         }
       } catch (err) {
