@@ -12,20 +12,28 @@ export default function App() {
   const { isRecording } = useTrackStore();
   const { error } = useLocation();
 
+  // Log per debug
+  useEffect(() => {
+    console.log('App - Screen changed:', screen, 'isRecording:', isRecording);
+  }, [screen, isRecording]);
+
   // Avvia registrazione
   const handleStartRecording = () => {
+    console.log('App - handleStartRecording called');
     useTrackStore.getState().startRecording();
     setScreen('recording');
   };
 
   // Ferma registrazione
   const handleStopRecording = () => {
+    console.log('App - handleStopRecording called');
     useTrackStore.getState().stopRecording();
     setScreen('summary');
   };
 
   // Reset
   const handleReset = () => {
+    console.log('App - handleReset called');
     useTrackStore.getState().reset();
     setScreen('home');
   };

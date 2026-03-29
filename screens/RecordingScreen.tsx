@@ -27,7 +27,20 @@ export default function RecordingScreen() {
   const distance = getTotalDistance();
   const speed = getAverageSpeed();
 
+  // Log per debug
+  useEffect(() => {
+    console.log('RecordingScreen - Values:', {
+      duration,
+      distance,
+      speed,
+      waypointsLength: waypoints.length,
+      isRecording,
+      location: location ? { lat: location.latitude, lon: location.longitude } : null
+    });
+  }, [duration, distance, speed, waypoints, isRecording, location]);
+
   const handleStopRecording = () => {
+    console.log('Handle stop recording called');
     // Navigazione verso SummaryScreen (gestita dal parent)
   };
 

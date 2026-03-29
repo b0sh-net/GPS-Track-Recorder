@@ -24,13 +24,16 @@ export function useLocation() {
     // Richiedi permessi e inizia il monitoraggio
     (async () => {
       try {
+        console.log('useLocation - Requesting foreground permissions');
         const { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== 'granted') {
           setError('Posizione non autorizzata. Abilita i permessi nelle impostazioni.');
+          console.log('useLocation - Permissions denied:', status);
           return;
         }
 
+        console.log('useLocation - Permissions granted:', status);
         const currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
           allowBackgroundLocationUpdates: true,
@@ -39,11 +42,13 @@ export function useLocation() {
         });
 
         if (isMounted) {
+          console.log('useLocation - Initial location:', currentLocation.coords);
           setLocation(currentLocation.coords);
           setStatus(status);
         }
 
         // Ascolta aggiornamenti in tempo reale dopo aver ottenuto i permessi
+        console.log('useLocation - Setting up watchPositionAsync');
         subscriptionRef.current = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.Balanced,
@@ -52,7 +57,7 @@ export function useLocation() {
           },
           (location) => {
             if (isMounted) {
-              setLocation({
+              const locationData = {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
                 accuracy: location.coords.accuracy,
@@ -60,13 +65,17 @@ export function useLocation() {
                 altitude: location.coords.altitude,
                 heading: location.coords.heading,
                 speed: location.coords.speed,
-              });
+              };
+              console.log('useLocation - New location update:', locationData);
+              setLocation(locationData);
             }
           }
         );
       } catch (err) {
         if (isMounted) {
-          setError('Errore durante l\'acquisizione della posizione: ' + (err as Error).message);
+          const errorMsg = 'Errore durante l\'acquisizione della posizione: ' + (err as Error).message;
+          setError(errorMsg);
+          console.log('useLocation - Error:', errorMsg);
         }
       }
     })();
@@ -79,6 +88,7 @@ export function useLocation() {
         const currentLocation = await Location.getLastKnownPositionAsync();
         if (currentLocation) {
           if (isMounted) {
+            console.log('useLocation - Timer update:', currentLocation);
             setLocation(currentLocation);
           }
         }
@@ -88,13 +98,22 @@ export function useLocation() {
     }, 5000); // Richiedi posizione ogni 5 secondi
 
     return () => {
+      console.log('useLocation - Cleanup effect');
       isMounted = false;
       timerRef.current && clearInterval(timerRef.current);
       if (subscriptionRef.current) {
+        console.log('useLocation - Removing subscription');
         subscriptionRef.current.remove();
       }
     };
   }, []);
+
+  // Log when location changes
+  useEffect(() => {
+    if (location) {
+      console.log('useLocation - Location state changed:', location);
+    }
+  }, [location]);
 
   return { location, status, error };
 }

@@ -23,31 +23,38 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   waypoints: [],
   startTime: null,
 
-  startRecording: () =>
+  startRecording: () => {
+    console.log('useTrackStore - startRecording called');
     set({
       isRecording: true,
       waypoints: [],
       startTime: Date.now(),
-    }),
+    });
+  },
 
   stopRecording: () => {
+    console.log('useTrackStore - stopRecording called');
     const { waypoints, startTime } = get();
     return set({ isRecording: false });
   },
 
-  reset: () =>
+  reset: () => {
+    console.log('useTrackStore - reset called');
     set({
       isRecording: false,
       waypoints: [],
       startTime: null,
-    }),
+    });
+  },
 
   addWaypoint: (waypoint) => {
+    console.log('useTrackStore - addWaypoint called', waypoint);
     const { waypoints } = get();
     return set({ waypoints: [...waypoints, waypoint] });
   },
 
   clearWaypoints: () => {
+    console.log('useTrackStore - clearWaypoints called');
     const { waypoints } = get();
     // Mantieni solo i punti più recenti (ultimo 50)
     return set({ waypoints: waypoints.slice(-50) });
@@ -55,12 +62,17 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
 
   getRecordingDuration: () => {
     const { startTime } = get();
-    return startTime ? Date.now() - startTime : 0;
+    const result = startTime ? Date.now() - startTime : 0;
+    console.log('useTrackStore - getRecordingDuration called:', result);
+    return result;
   },
 
   getTotalDistance: () => {
     const { waypoints } = get();
-    if (waypoints.length < 2) return 0;
+    if (waypoints.length < 2) {
+      console.log('useTrackStore - getTotalDistance called: < 2 waypoints, returning 0');
+      return 0;
+    }
 
     let totalDistance = 0;
     for (let i = 0; i < waypoints.length - 1; i++) {
@@ -76,14 +88,18 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       totalDistance += c * 6371;
     }
+    console.log('useTrackStore - getTotalDistance called:', totalDistance, 'waypoints:', waypoints.length);
     return totalDistance;
   },
 
   getAverageSpeed: () => {
+    console.log('useTrackStore - getAverageSpeed called');
     const { startTime, waypoints } = get();
     const distance = get().getTotalDistance();
     const duration = get().getRecordingDuration();
-    return duration > 0 ? (distance / duration) * 3600 : 0; // km/h
+    const result = duration > 0 ? (distance / duration) * 3600 : 0; // km/h
+    console.log('useTrackStore - getAverageSpeed result:', result, 'distance:', distance, 'duration:', duration);
+    return result;
   },
 }));
 
