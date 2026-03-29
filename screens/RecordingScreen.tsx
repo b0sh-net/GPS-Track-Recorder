@@ -53,11 +53,14 @@ export default function RecordingScreen() {
   // Aggiorna waypoint quando riceve nuova posizione
   useEffect(() => {
     if (location && isRecording) {
-      const waypoint: { lat: number; lon: number; timestamp: number } = {
+      const waypoint: LocationData = {
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
-        timestamp: Date.now(),
+        timestamp: location.timestamp,
+        altitude: location.altitude,
+        heading: location.heading,
+        speed: location.speed,
       };
       addWaypoint(waypoint);
     }
