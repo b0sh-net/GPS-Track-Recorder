@@ -40,7 +40,8 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
       await exportToKML(waypoints, fileName);
       Alert.alert('Esportazione completata', `KML salvato come ${fileName}`);
     } catch (err) {
-      Alert.alert('Errore', 'Non è stato possibile esportare il file.');
+      console.error('Export KML error:', err);
+      Alert.alert('Errore', `Esportazione fallita: ${err.message || err}`);
     }
   };
 
@@ -55,7 +56,8 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
       await exportToGPX(waypoints, fileName);
       Alert.alert('Esportazione completata', `GPX salvato come ${fileName}`);
     } catch (err) {
-      Alert.alert('Errore', 'Non è stato possibile esportare il file.');
+      console.error('Export GPX error:', err);
+      Alert.alert('Errore', `Esportazione fallita: ${err.message || err}`);
     }
   };
 

@@ -7,14 +7,14 @@
  * @param waypoints - Array di waypoint {lat, lon, timestamp}
  * @returns Stringa XML KML
  */
-export function generateKML(waypoints: { lat: number; lon: number; timestamp: number }[]): string {
+export function generateKML(waypoints: { latitude: number; longitude: number; timestamp: number }[]): string {
   const pointElements = waypoints
     .map((wp) => {
       const timestamp = new Date(wp.timestamp).toISOString().split('.')[0].replace(/-/g, '/');
       return `  <Placemark>
     <name>Point at ${timestamp}</name>
     <Point>
-      <coordinates>${wp.lon},${wp.lat},0</coordinates>
+      <coordinates>${wp.longitude},${wp.latitude},0</coordinates>
     </Point>
   </Placemark>`;
     })
@@ -35,12 +35,12 @@ ${pointElements}
  * @param waypoints - Array di waypoint {lat, lon, elevation?, timestamp}
  * @returns Stringa XML GPX
  */
-export function generateGPX(waypoints: { lat: number; lon: number; elevation?: number; timestamp: number }[]): string {
+export function generateGPX(waypoints: { latitude: number; longitude: number; elevation?: number; timestamp: number }[]): string {
   const trkptElements = waypoints
     .map((wp) => {
       const timestamp = new Date(wp.timestamp).toISOString();
       const elevation = wp.elevation !== undefined ? wp.elevation : '';
-      return `    <trkpt lat="${wp.lat}" lon="${wp.lon}">
+      return `    <trkpt lat="${wp.latitude}" lon="${wp.longitude}">
       <ele>${elevation}</ele>
       <time>${timestamp}</time>
     </trkpt>`;
@@ -63,25 +63,35 @@ ${trkptElements}
  * @param fileName - Nome del file da esportare
  * @returns Promise che risolve quando il file è stato salvato
  */
-export async function exportToKML(waypoints: { lat: number; lon: number; timestamp: number }[], fileName: string = 'track.kml'): Promise<void> {
-  const kmlContent = generateKML(waypoints);
+export async function exportToKML(waypoints: { latitude: number; longitude: number; timestamp: number }[], fileName: string = 'track.kml'): Promise<void> {
+  try {
+    const kmlContent = generateKML(waypoints);
+    console.log('exportToKML - Generated KML content length:', kmlContent.length);
 
-  // Copia il contenuto in un file temporaneo
-  const fileSystem = require('expo-file-system');
-  const assetLibrary = fileSystem.documentDirectory + fileName;
+    // Copia il contenuto in un file temporaneo
+    const fileSystem = require('expo-file-system');
+    const assetLibrary = fileSystem.documentDirectory + fileName;
+    console.log('exportToKML - Writing to file:', assetLibrary);
 
-  // Usa expo-sharing per salvare
-  const { shareAsync } = require('expo-sharing');
+    // Usa expo-sharing per salvare
+    const { shareAsync } = require('expo-sharing');
 
-  await fileSystem.writeAsStringAsync(assetLibrary, kmlContent, {
-    encoding: fileSystem.EncodingType.UTF8,
-  });
+    await fileSystem.writeAsStringAsync(assetLibrary, kmlContent, {
+      encoding: fileSystem.EncodingType.UTF8,
+    });
+    console.log('exportToKML - File written successfully');
 
-  // Avvia shareAsync per permettere all'utente di salvare il file
-  await shareAsync(assetLibrary, fileName);
+    // Avvia shareAsync per permettere all'utente di salvare il file
+    await shareAsync(assetLibrary, fileName);
+    console.log('exportToKML - Share completed');
 
-  // Cancella file temporaneo
-  await fileSystem.deleteAsync(assetLibrary);
+    // Cancella file temporaneo
+    await fileSystem.deleteAsync(assetLibrary);
+    console.log('exportToKML - Temporary file deleted');
+  } catch (error) {
+    console.error('exportToKML - Error:', error);
+    throw error;
+  }
 }
 
 /**
@@ -91,23 +101,33 @@ export async function exportToKML(waypoints: { lat: number; lon: number; timesta
  * @returns Promise che risolve quando il file è stato salvato
  */
 export async function exportToGPX(
-  waypoints: { lat: number; lon: number; elevation?: number; timestamp: number }[],
+  waypoints: { latitude: number; longitude: number; elevation?: number; timestamp: number }[],
   fileName: string = 'track.gpx'
 ): Promise<void> {
-  const gpxContent = generateGPX(waypoints);
+  try {
+    const gpxContent = generateGPX(waypoints);
+    console.log('exportToGPX - Generated GPX content length:', gpxContent.length);
 
-  const fileSystem = require('expo-file-system');
-  const assetLibrary = fileSystem.documentDirectory + fileName;
-  const { shareAsync } = require('expo-sharing');
+    const fileSystem = require('expo-file-system');
+    const assetLibrary = fileSystem.documentDirectory + fileName;
+    const { shareAsync } = require('expo-sharing');
+    console.log('exportToGPX - Writing to file:', assetLibrary);
 
-  await fileSystem.writeAsStringAsync(assetLibrary, gpxContent, {
-    encoding: fileSystem.EncodingType.UTF8,
-  });
+    await fileSystem.writeAsStringAsync(assetLibrary, gpxContent, {
+      encoding: fileSystem.EncodingType.UTF8,
+    });
+    console.log('exportToGPX - File written successfully');
 
-  await shareAsync(assetLibrary, fileName);
+    await shareAsync(assetLibrary, fileName);
+    console.log('exportToGPX - Share completed');
 
-  // Cancella file temporaneo
-  await fileSystem.deleteAsync(assetLibrary);
+    // Cancella file temporaneo
+    await fileSystem.deleteAsync(assetLibrary);
+    console.log('exportToGPX - Temporary file deleted');
+  } catch (error) {
+    console.error('exportToGPX - Error:', error);
+    throw error;
+  }
 }
 
 /**
