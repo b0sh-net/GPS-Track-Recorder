@@ -85,7 +85,9 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
 
           <View style={styles.statContainer}>
             <Text style={styles.statLabel}>Distanza totale</Text>
-            <Text style={styles.statValue}>{(distance ?? 0).toFixed(2)} km</Text>
+            <Text style={styles.statValue}>
+              {(distance ?? 0).toFixed(2)} km
+            </Text>
           </View>
 
           <View style={styles.statContainer}>
@@ -96,7 +98,7 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
           <View style={styles.statContainer}>
             <Text style={styles.statLabel}>Velocità media</Text>
             <Text style={styles.statValue}>
-              {((speed ?? 0) as number).toFixed(1)} km/h
+              {(speed ?? 0).toFixed(1)} km/h
             </Text>
           </View>
 

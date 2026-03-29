@@ -60,7 +60,9 @@ export default function RecordingScreen() {
       <View style={styles.statsContainer}>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Distanza</Text>
-          <Text style={styles.statValue}>{(distance ?? 0).toFixed(2)} km</Text>
+          <Text style={styles.statValue}>
+            {(distance ?? 0).toFixed(2)} km
+          </Text>
         </View>
 
         <View style={styles.statRow}>
@@ -71,7 +73,7 @@ export default function RecordingScreen() {
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Velocità</Text>
           <Text style={styles.statValue}>
-            {((speed ?? 0) as number).toFixed(1)} km/h
+            {(speed ?? 0).toFixed(1)} km/h
           </Text>
         </View>
 
@@ -85,9 +87,9 @@ export default function RecordingScreen() {
         <View style={styles.locationInfo}>
           <Text style={styles.locationLabel}>Posizione:</Text>
           <Text style={styles.locationValue}>
-            {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+            {(location.latitude ?? 0).toFixed(6)}, {(location.longitude ?? 0).toFixed(6)}
           </Text>
-          {location.speed !== undefined && (
+          {(location.speed ?? 0) > 0 && (
             <Text style={styles.locationSubValue}>
               {location.speed.toFixed(1)} km/h
             </Text>
