@@ -117,7 +117,7 @@ export async function exportToKML(waypoints: { latitude: number; longitude: numb
     console.log('exportToKML - File written successfully');
 
     // Avvia shareAsync per permettere all'utente di salvare il file
-    await shareAsync(assetLibrary, fileName);
+    await shareAsync(assetLibrary);
     console.log('exportToKML - Share completed');
 
     // Cancella file temporaneo
@@ -154,7 +154,7 @@ export async function exportToGPX(
     });
     console.log('exportToGPX - File written successfully');
 
-    await shareAsync(assetLibrary, fileName);
+    await shareAsync(assetLibrary);
     console.log('exportToGPX - Share completed');
 
     // Cancella file temporaneo

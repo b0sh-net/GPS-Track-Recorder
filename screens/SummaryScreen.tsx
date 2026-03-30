@@ -36,9 +36,9 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
     }
 
     try {
-      const fileName = getFileNameFromTimestamp(Date.now());
-      await exportToKML(waypoints, fileName);
-      Alert.alert('Esportazione completata', `KML salvato come ${fileName}`);
+      const baseFileName = getFileNameFromTimestamp(Date.now()).replace('.kml', '');
+      await exportToKML(waypoints, `${baseFileName}.kml`);
+      Alert.alert('Esportazione completata', `KML salvato come ${baseFileName}.kml`);
     } catch (err) {
       console.error('Export KML error:', err);
       Alert.alert('Errore', `Esportazione fallita: ${err.message || err}`);
@@ -52,9 +52,9 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
     }
 
     try {
-      const fileName = getFileNameFromTimestamp(Date.now()) + '.gpx';
-      await exportToGPX(waypoints, fileName);
-      Alert.alert('Esportazione completata', `GPX salvato come ${fileName}`);
+      const baseFileName = getFileNameFromTimestamp(Date.now()).replace('.kml', '');
+      await exportToGPX(waypoints, `${baseFileName}.gpx`);
+      Alert.alert('Esportazione completata', `GPX salvato come ${baseFileName}.gpx`);
     } catch (err) {
       console.error('Export GPX error:', err);
       Alert.alert('Errore', `Esportazione fallita: ${err.message || err}`);
