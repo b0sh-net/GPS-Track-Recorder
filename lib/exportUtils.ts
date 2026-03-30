@@ -103,7 +103,7 @@ export async function exportToKML(waypoints: { latitude: number; longitude: numb
     console.log('exportToKML - Generated KML content length:', kmlContent.length);
 
     // Copia il contenuto in un file temporaneo
-    const fileSystem = require('expo-file-system');
+    const fileSystem = require('expo-file-system/legacy');
     console.log('exportToKML - fileSystem:', fileSystem);
     const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + fileName : fileName;
     console.log('exportToKML - Writing to file:', assetLibrary);
@@ -143,13 +143,14 @@ export async function exportToGPX(
     const gpxContent = generateGPX(waypoints);
     console.log('exportToGPX - Generated GPX content length:', gpxContent.length);
 
-    const fileSystem = require('expo-file-system');
-    const assetLibrary = fileSystem.documentDirectory + fileName;
+    const fileSystem = require('expo-file-system/legacy');
+    console.log('exportToGPX - fileSystem:', fileSystem);
+    const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + fileName : fileName;
     const { shareAsync } = require('expo-sharing');
     console.log('exportToGPX - Writing to file:', assetLibrary);
 
     await fileSystem.writeAsStringAsync(assetLibrary, gpxContent, {
-      encoding: fileSystem.EncodingType.UTF8,
+      encoding: fileSystem.EncodingType && fileSystem.EncodingType.UTF8 ? fileSystem.EncodingType.UTF8 : 'utf8',
     });
     console.log('exportToGPX - File written successfully');
 
