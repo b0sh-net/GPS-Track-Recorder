@@ -43,7 +43,16 @@ export function useLocation() {
 
         if (isMounted) {
           console.log('useLocation - Initial location:', currentLocation.coords);
-          setLocation(currentLocation.coords);
+          const locationData = {
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+            accuracy: currentLocation.coords.accuracy,
+            timestamp: currentLocation.timestamp,
+            altitude: currentLocation.coords.altitude,
+            heading: currentLocation.coords.heading,
+            speed: currentLocation.coords.speed,
+          };
+          setLocation(locationData);
           setStatus(status);
         }
 
@@ -89,7 +98,17 @@ export function useLocation() {
         if (currentLocation) {
           if (isMounted) {
             console.log('useLocation - Timer update:', currentLocation);
-            setLocation(currentLocation.coords);
+            const locationData = {
+              latitude: currentLocation.coords.latitude,
+              longitude: currentLocation.coords.longitude,
+              accuracy: currentLocation.coords.accuracy,
+              timestamp: currentLocation.timestamp,
+              altitude: currentLocation.coords.altitude,
+              heading: currentLocation.coords.heading,
+              speed: currentLocation.coords.speed,
+            };
+            console.log('useLocation - Timer locationData:', locationData);
+            setLocation(locationData);
           }
         }
       } catch (err) {

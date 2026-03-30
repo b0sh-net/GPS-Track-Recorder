@@ -10,9 +10,26 @@
 export function generateKML(waypoints: { latitude: number; longitude: number; timestamp: number }[]): string {
   const pointElements = waypoints
     .map((wp) => {
-      const timestamp = new Date(wp.timestamp).toISOString().split('.')[0].replace(/-/g, '/');
+      let timestampString = '';
+      try {
+        const date = new Date(wp.timestamp);
+        // Check if the date is valid
+        if (!isNaN(date.getTime())) {
+          timestampString = date.toISOString().split('.')[0].replace(/-/g, '/');
+        } else {
+          // Fallback to current time if timestamp is invalid
+          const now = new Date();
+          timestampString = now.toISOString().split('.')[0].replace(/-/g, '/');
+          console.warn('generateKML - Invalid timestamp:', wp.timestamp, 'using current time instead');
+        }
+      } catch (error) {
+        // Fallback to current time if timestamp causes error
+        const now = new Date();
+        timestampString = now.toISOString().split('.')[0].replace(/-/g, '/');
+        console.warn('generateKML - Timestamp error:', error, 'using current time instead');
+      }
       return `  <Placemark>
-    <name>Point at ${timestamp}</name>
+    <name>Point at ${timestampString}</name>
     <Point>
       <coordinates>${wp.longitude},${wp.latitude},0</coordinates>
     </Point>
@@ -38,11 +55,28 @@ ${pointElements}
 export function generateGPX(waypoints: { latitude: number; longitude: number; elevation?: number; timestamp: number }[]): string {
   const trkptElements = waypoints
     .map((wp) => {
-      const timestamp = new Date(wp.timestamp).toISOString();
+      let timestampString = '';
+      try {
+        const date = new Date(wp.timestamp);
+        // Check if the date is valid
+        if (!isNaN(date.getTime())) {
+          timestampString = date.toISOString();
+        } else {
+          // Fallback to current time if timestamp is invalid
+          const now = new Date();
+          timestampString = now.toISOString();
+          console.warn('generateGPX - Invalid timestamp:', wp.timestamp, 'using current time instead');
+        }
+      } catch (error) {
+        // Fallback to current time if timestamp causes error
+        const now = new Date();
+        timestampString = now.toISOString();
+        console.warn('generateGPX - Timestamp error:', error, 'using current time instead');
+      }
       const elevation = wp.elevation !== undefined ? wp.elevation : '';
       return `    <trkpt lat="${wp.latitude}" lon="${wp.longitude}">
       <ele>${elevation}</ele>
-      <time>${timestamp}</time>
+      <time>${timestampString}</time>
     </trkpt>`;
     })
     .join('\n');
@@ -70,14 +104,15 @@ export async function exportToKML(waypoints: { latitude: number; longitude: numb
 
     // Copia il contenuto in un file temporaneo
     const fileSystem = require('expo-file-system');
-    const assetLibrary = fileSystem.documentDirectory + fileName;
+    console.log('exportToKML - fileSystem:', fileSystem);
+    const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + fileName : fileName;
     console.log('exportToKML - Writing to file:', assetLibrary);
 
     // Usa expo-sharing per salvare
     const { shareAsync } = require('expo-sharing');
 
     await fileSystem.writeAsStringAsync(assetLibrary, kmlContent, {
-      encoding: fileSystem.EncodingType.UTF8,
+      encoding: fileSystem.EncodingType && fileSystem.EncodingType.UTF8 ? fileSystem.EncodingType.UTF8 : 'utf8',
     });
     console.log('exportToKML - File written successfully');
 
