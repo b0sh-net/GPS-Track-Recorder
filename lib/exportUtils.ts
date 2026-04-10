@@ -3,6 +3,20 @@
  */
 
 /**
+ * Escape special XML characters to prevent XML injection
+ */
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+/**
+ * Sanitize filename to prevent path traversal
+ */
+function sanitizeFileName(fileName: string): string {
+  return fileName.replace(/[/\\]/g, '_').replace(/\.\./g, '_');
+}
+
+/**
  * Genera un file KML da un array di waypoint
  * @param waypoints - Array di waypoint {lat, lon, timestamp}
  * @returns Stringa XML KML
@@ -29,7 +43,7 @@ export function generateKML(waypoints: { latitude: number; longitude: number; ti
         console.warn('generateKML - Timestamp error:', error, 'using current time instead');
       }
       return `  <Placemark>
-    <name>Point at ${timestampString}</name>
+    <name>Point at ${escapeXml(timestampString)}</name>
     <Point>
       <coordinates>${wp.longitude},${wp.latitude},0</coordinates>
     </Point>
@@ -76,7 +90,7 @@ export function generateGPX(waypoints: { latitude: number; longitude: number; el
       const elevation = wp.elevation !== undefined ? wp.elevation : '';
       return `    <trkpt lat="${wp.latitude}" lon="${wp.longitude}">
       <ele>${elevation}</ele>
-      <time>${timestampString}</time>
+      <time>${escapeXml(timestampString)}</time>
     </trkpt>`;
     })
     .join('\n');
@@ -105,7 +119,8 @@ export async function exportToKML(waypoints: { latitude: number; longitude: numb
     // Copia il contenuto in un file temporaneo
     const fileSystem = require('expo-file-system/legacy');
     console.log('exportToKML - fileSystem:', fileSystem);
-    const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + fileName : fileName;
+    const safeFileName = sanitizeFileName(fileName);
+    const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + safeFileName : safeFileName;
     console.log('exportToKML - Writing to file:', assetLibrary);
 
     // Usa expo-sharing per salvare
@@ -145,7 +160,8 @@ export async function exportToGPX(
 
     const fileSystem = require('expo-file-system/legacy');
     console.log('exportToGPX - fileSystem:', fileSystem);
-    const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + fileName : fileName;
+    const safeFileName = sanitizeFileName(fileName);
+    const assetLibrary = fileSystem.documentDirectory ? fileSystem.documentDirectory + safeFileName : safeFileName;
     const { shareAsync } = require('expo-sharing');
     console.log('exportToGPX - Writing to file:', assetLibrary);
 

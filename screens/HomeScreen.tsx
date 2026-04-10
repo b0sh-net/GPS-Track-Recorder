@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
 type HomeScreenProps = {
-  onStartRecording: () => void;
+  onStartRecording?: () => void;
 };
 
-export default function HomeScreen({ onStartRecording }: HomeScreenProps) {
+export default function HomeScreen({ onStartRecording = () => {} }: HomeScreenProps) {
 
   return (
     <View style={styles.container}>

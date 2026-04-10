@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import * as Location from 'expo-location';
+import type { LocationSubscription } from 'expo-location';
+
+// ReturnType<typeof setInterval> works cross-platform
+type TimerHandle = ReturnType<typeof setInterval>;
 
 export type LocationData = {
   latitude: number;
@@ -15,8 +19,8 @@ export function useLocation() {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [status, setStatus] = useState<Location.PermissionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const subscriptionRef = useRef<Location.Subscription | null>(null);
-  const timerRef = useRef<number | null>(null);
+  const subscriptionRef = useRef<LocationSubscription | null>(null);
+  const timerRef = useRef<TimerHandle | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,9 +40,6 @@ export function useLocation() {
         console.log('useLocation - Permissions granted:', status);
         const currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
-          allowBackgroundLocationUpdates: true,
-          timeInterval: 3000, // Richiedi nuova posizione ogni 3 secondi
-          distanceInterval: 10, // Richiedi nuova posizione ogni 10 metri
         });
 
         if (isMounted) {
@@ -46,11 +47,11 @@ export function useLocation() {
           const locationData = {
             latitude: currentLocation.coords.latitude,
             longitude: currentLocation.coords.longitude,
-            accuracy: currentLocation.coords.accuracy,
+            accuracy: currentLocation.coords.accuracy ?? 0,
             timestamp: currentLocation.timestamp,
-            altitude: currentLocation.coords.altitude,
-            heading: currentLocation.coords.heading,
-            speed: currentLocation.coords.speed,
+            altitude: currentLocation.coords.altitude ?? undefined,
+            heading: currentLocation.coords.heading ?? undefined,
+            speed: currentLocation.coords.speed ?? undefined,
           };
           setLocation(locationData);
           setStatus(status);
@@ -69,11 +70,11 @@ export function useLocation() {
               const locationData = {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
-                accuracy: location.coords.accuracy,
+                accuracy: location.coords.accuracy ?? 0,
                 timestamp: location.timestamp,
-                altitude: location.coords.altitude,
-                heading: location.coords.heading,
-                speed: location.coords.speed,
+                altitude: location.coords.altitude ?? undefined,
+                heading: location.coords.heading ?? undefined,
+                speed: location.coords.speed ?? undefined,
               };
               console.log('useLocation - New location update:', locationData);
               setLocation(locationData);
@@ -101,11 +102,11 @@ export function useLocation() {
             const locationData = {
               latitude: currentLocation.coords.latitude,
               longitude: currentLocation.coords.longitude,
-              accuracy: currentLocation.coords.accuracy,
+              accuracy: currentLocation.coords.accuracy ?? 0,
               timestamp: currentLocation.timestamp,
-              altitude: currentLocation.coords.altitude,
-              heading: currentLocation.coords.heading,
-              speed: currentLocation.coords.speed,
+              altitude: currentLocation.coords.altitude ?? undefined,
+              heading: currentLocation.coords.heading ?? undefined,
+              speed: currentLocation.coords.speed ?? undefined,
             };
             console.log('useLocation - Timer locationData:', locationData);
             setLocation(locationData);

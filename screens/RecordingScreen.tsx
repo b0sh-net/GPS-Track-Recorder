@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,15 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
-import { useLocation } from '../hooks/useLocation';
+import { useLocation, LocationData } from '../hooks/useLocation';
 import useTrackStore from '../hooks/useTrackStore';
 import { formatDuration } from '../lib/gpsUtils';
 
 type RecordingScreenProps = {
-  onStopRecording: () => void;
+  onStopRecording?: () => void;
 };
 
-export default function RecordingScreen({ onStopRecording }: RecordingScreenProps) {
-  const [startTime] = useState(Date.now());
+export default function RecordingScreen({ onStopRecording = () => {} }: RecordingScreenProps) {
   const { location, status, error } = useLocation();
   const {
     waypoints,
@@ -124,7 +123,7 @@ export default function RecordingScreen({ onStopRecording }: RecordingScreenProp
           </Text>
           {(location.speed ?? 0) > 0 && (
             <Text style={styles.locationSubValue}>
-              {location.speed.toFixed(1)} km/h
+              {location.speed!.toFixed(1)} km/h
             </Text>
           )}
         </View>

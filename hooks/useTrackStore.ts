@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { LocationData } from '../hooks/useLocation';
+import { calculateTotalDistance } from '../lib/gpsUtils';
 
 type RecordingState = {
   isRecording: boolean;
@@ -50,7 +51,11 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   addWaypoint: (waypoint) => {
     console.log('useTrackStore - addWaypoint called', waypoint);
     const { waypoints } = get();
-    return set({ waypoints: [...waypoints, waypoint] });
+    // Cap array to prevent memory issues on long recordings
+    const newWaypoints = waypoints.length > 10000
+      ? [...waypoints.slice(-8000), waypoint]
+      : [...waypoints, waypoint];
+    return set({ waypoints: newWaypoints });
   },
 
   clearWaypoints: () => {
@@ -73,30 +78,20 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       console.log('useTrackStore - getTotalDistance called: < 2 waypoints, returning 0');
       return 0;
     }
-
-    let totalDistance = 0;
-    for (let i = 0; i < waypoints.length - 1; i++) {
-      const wp1 = waypoints[i];
-      const wp2 = waypoints[i + 1];
-      const dLat = wp2.latitude - wp1.latitude;
-      const dLon = wp2.longitude - wp1.longitude;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(wp1.latitude * Math.PI / 180) *
-        Math.cos(wp2.latitude * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      totalDistance += c * 6371;
-    }
-    console.log('useTrackStore - getTotalDistance called:', totalDistance, 'waypoints:', waypoints.length);
-    return totalDistance;
+    const result = calculateTotalDistance(
+      waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude }))
+    );
+    console.log('useTrackStore - getTotalDistance called:', result, 'waypoints:', waypoints.length);
+    return result;
   },
 
   getAverageSpeed: () => {
     console.log('useTrackStore - getAverageSpeed called');
     const { startTime, waypoints } = get();
-    const distance = get().getTotalDistance();
-    const duration = get().getRecordingDuration();
+    const duration = startTime ? Date.now() - startTime : 0;
+    const distance = waypoints.length < 2
+      ? 0
+      : calculateTotalDistance(waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude })));
     const result = duration > 0 ? (distance / duration) * 3600 : 0; // km/h
     console.log('useTrackStore - getAverageSpeed result:', result, 'distance:', distance, 'duration:', duration);
     return result;

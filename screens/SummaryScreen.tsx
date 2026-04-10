@@ -17,10 +17,10 @@ import useTrackStore from '../hooks/useTrackStore';
 import { formatDuration } from '../lib/gpsUtils';
 
 type SummaryScreenProps = {
-  onReset: () => void;
+  onReset?: () => void;
 };
 
-export default function SummaryScreen({ onReset }: SummaryScreenProps) {
+export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps) {
   const { waypoints, getRecordingDuration, getTotalDistance, getAverageSpeed } =
     useTrackStore();
 
@@ -41,7 +41,8 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
       Alert.alert('Esportazione completata', `KML salvato come ${baseFileName}.kml`);
     } catch (err) {
       console.error('Export KML error:', err);
-      Alert.alert('Errore', `Esportazione fallita: ${err.message || err}`);
+      const errorMessage = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Errore sconosciuto';
+      Alert.alert('Errore', `Esportazione fallita: ${errorMessage}`);
     }
   };
 
@@ -57,13 +58,20 @@ export default function SummaryScreen({ onReset }: SummaryScreenProps) {
       Alert.alert('Esportazione completata', `GPX salvato come ${baseFileName}.gpx`);
     } catch (err) {
       console.error('Export GPX error:', err);
-      Alert.alert('Errore', `Esportazione fallita: ${err.message || err}`);
+      const errorMessage = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Errore sconosciuto';
+      Alert.alert('Errore', `Esportazione fallita: ${errorMessage}`);
     }
   };
 
   const handleReset = () => {
-    onReset();
-    Alert.alert('Reset', 'La traccia è stata cancellata.');
+    Alert.alert(
+      'Conferma reset',
+      'Vuoi davvero cancellare la traccia?',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        { text: 'Reset', onPress: () => onReset() },
+      ]
+    );
   };
 
   if (waypointCount === 0) {
