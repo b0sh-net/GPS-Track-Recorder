@@ -36,6 +36,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "766c637a-151a-4ea6-b83c-9b4177667e30"
+      }
+    },
+    "owner": "simone.b.8"
   }
 }
