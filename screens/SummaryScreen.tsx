@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
-import * as Sharing from 'expo-sharing';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   exportToKML,
   exportToGPX,
@@ -78,6 +79,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>📭</Text>
           <Text style={styles.emptyText}>La traccia è vuota</Text>
           <Text style={styles.emptySubText}>
             Premi "Avvia Registrazione" e poi "Ferma Registrazione"
@@ -89,60 +91,97 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Riepilogo Traccia</Text>
+      {/* Hero header with gradient */}
+      <LinearGradient
+        colors={['#4CAF50', '#2E7D32']}
+        style={styles.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Text style={styles.heroIcon}>✅</Text>
+        <Text style={styles.heroTitle}>Registrazione Completata</Text>
+        <Text style={styles.heroSubtitle}>Ecco il riepilogo della tua traccia</Text>
+      </LinearGradient>
 
-          <View style={styles.statContainer}>
-            <Text style={styles.statLabel}>Distanza totale</Text>
-            <Text style={styles.statValue}>
-              {(distance ?? 0).toFixed(2)} km
-            </Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Hero stats */}
+        <View style={styles.heroStats}>
+          <View style={[styles.heroStatCard, styles.heroStatCardLarge]}>
+            <Text style={styles.heroStatIcon}>📏</Text>
+            <Text style={styles.heroStatValue}>{(distance ?? 0).toFixed(2)}</Text>
+            <Text style={styles.heroStatUnit}>km</Text>
+            <Text style={styles.heroStatLabel}>Distanza</Text>
           </View>
 
-          <View style={styles.statContainer}>
-            <Text style={styles.statLabel}>Tempo di registrazione</Text>
-            <Text style={styles.statValue}>{formatDuration(duration)}</Text>
+          <View style={styles.heroStatRow}>
+            <View style={[styles.heroStatCard, styles.heroStatCardSmall]}>
+              <Text style={styles.heroStatIcon}>⏱️</Text>
+              <Text style={styles.heroStatValueSmall}>{formatDuration(duration)}</Text>
+              <Text style={styles.heroStatLabel}>Durata</Text>
+            </View>
+
+            <View style={[styles.heroStatCard, styles.heroStatCardSmall]}>
+              <Text style={styles.heroStatIcon}>💨</Text>
+              <Text style={styles.heroStatValueSmall}>{(speed ?? 0).toFixed(1)}</Text>
+              <Text style={styles.heroStatUnitSmall}>km/h</Text>
+              <Text style={styles.heroStatLabel}>Vel. media</Text>
+            </View>
           </View>
 
-          <View style={styles.statContainer}>
-            <Text style={styles.statLabel}>Velocità media</Text>
-            <Text style={styles.statValue}>
-              {(speed ?? 0).toFixed(1)} km/h
-            </Text>
-          </View>
-
-          <View style={styles.statContainer}>
-            <Text style={styles.statLabel}>Waypoint</Text>
-            <Text style={styles.statValue}>{waypointCount}</Text>
+          <View style={styles.heroStatCard}>
+            <Text style={styles.heroStatIcon}>📍</Text>
+            <Text style={styles.heroStatValue}>{waypointCount}</Text>
+            <Text style={styles.heroStatLabel}>Waypoint registrati</Text>
           </View>
         </View>
 
-        <View style={styles.actionsContainer}>
+        {/* Export section */}
+        <View style={styles.exportSection}>
+          <Text style={styles.exportTitle}>Esporta Traccia</Text>
+
           <TouchableOpacity
-            style={[styles.actionButton, styles.kmlButton]}
+            style={styles.exportCard}
             onPress={handleExportKML}
+            activeOpacity={0.85}
             accessibilityLabel="Esporta KML"
           >
-            <Text style={styles.actionButtonText}>ESPORTA KML</Text>
+            <View style={[styles.exportIcon, { backgroundColor: '#e8f5e9' }]}>
+              <Text style={styles.exportIconText}>🌍</Text>
+            </View>
+            <View style={styles.exportInfo}>
+              <Text style={styles.exportName}>Google Earth / Maps</Text>
+              <Text style={styles.exportFormat}>Formato KML</Text>
+            </View>
+            <Text style={styles.exportArrow}>→</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, styles.gpxButton]}
+            style={styles.exportCard}
             onPress={handleExportGPX}
+            activeOpacity={0.85}
             accessibilityLabel="Esporta GPX"
           >
-            <Text style={styles.actionButtonText}>ESPORTA GPX</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.resetButton]}
-            onPress={handleReset}
-            accessibilityLabel="Reset"
-          >
-            <Text style={styles.actionButtonText}>RESET</Text>
+            <View style={[styles.exportIcon, { backgroundColor: '#e3f2fd' }]}>
+              <Text style={styles.exportIconText}>🗺️</Text>
+            </View>
+            <View style={styles.exportInfo}>
+              <Text style={styles.exportName}>Strava, Garmin, GPS</Text>
+              <Text style={styles.exportFormat}>Formato GPX</Text>
+            </View>
+            <Text style={styles.exportArrow}>→</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Reset button */}
+        <TouchableOpacity
+          style={styles.resetButton}
+          onPress={handleReset}
+          activeOpacity={0.7}
+          accessibilityLabel="Reset"
+        >
+          <Text style={styles.resetIcon}>🗑️</Text>
+          <Text style={styles.resetText}>Cancella e Ricomincia</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -151,85 +190,223 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
+  },
+  hero: {
+    paddingTop: 28,
+    paddingBottom: 36,
+    alignItems: 'center',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  heroIcon: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
   },
   content: {
     flex: 1,
   },
-  summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  summaryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  statContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2196F3',
-  },
-  actionsContainer: {
+  heroStats: {
     paddingHorizontal: 16,
+    paddingTop: 24,
   },
-  actionButton: {
-    borderRadius: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+  heroStatCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 18,
     alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  kmlButton: {
-    backgroundColor: '#4CAF50',
+  heroStatCardLarge: {
+    marginBottom: 12,
   },
-  gpxButton: {
-    backgroundColor: '#2196F3',
+  heroStatRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  heroStatCardSmall: {
+    flex: 1,
+  },
+  heroStatIcon: {
+    fontSize: 22,
+    marginBottom: 6,
+  },
+  heroStatValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#1a1a2e',
+    lineHeight: 42,
+  },
+  heroStatValueSmall: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    lineHeight: 24,
+  },
+  heroStatUnit: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  heroStatUnitSmall: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  heroStatLabel: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 6,
+  },
+  exportSection: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  exportTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginBottom: 14,
+  },
+  exportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  exportIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  exportIconText: {
+    fontSize: 26,
+  },
+  exportInfo: {
+    flex: 1,
+  },
+  exportName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a2e',
+    marginBottom: 3,
+  },
+  exportFormat: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+  },
+  exportArrow: {
+    fontSize: 22,
+    color: '#ccc',
+    marginLeft: 8,
   },
   resetButton: {
-    backgroundColor: '#f44336',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginHorizontal: 16,
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+  resetIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  resetText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#c62828',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
   },
   emptySubText: {
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+    lineHeight: 22,
   },
 });
