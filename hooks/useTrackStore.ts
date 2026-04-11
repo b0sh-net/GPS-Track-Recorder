@@ -88,11 +88,26 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   getAverageSpeed: () => {
     console.log('useTrackStore - getAverageSpeed called');
     const { startTime, waypoints } = get();
-    const duration = startTime ? Date.now() - startTime : 0;
-    const distance = waypoints.length < 2
-      ? 0
-      : calculateTotalDistance(waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude })));
-    const result = duration > 0 ? (distance / duration) * 3600 : 0; // km/h
+    
+    // Need at least 2 waypoints to calculate distance
+    if (waypoints.length < 2 || !startTime) {
+      console.log('useTrackStore - getAverageSpeed: insufficient data, returning 0');
+      return 0;
+    }
+    
+    const duration = Date.now() - startTime; // milliseconds
+    const distance = calculateTotalDistance(
+      waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude }))
+    );
+    
+    // Avoid division by zero
+    if (duration <= 0) {
+      console.log('useTrackStore - getAverageSpeed: duration is 0, returning 0');
+      return 0;
+    }
+    
+    // Convert to km/h: (distance in km / duration in ms) * 3600000 ms/h
+    const result = (distance / duration) * 3600000;
     console.log('useTrackStore - getAverageSpeed result:', result, 'distance:', distance, 'duration:', duration);
     return result;
   },

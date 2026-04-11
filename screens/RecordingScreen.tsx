@@ -172,7 +172,7 @@ export default function RecordingScreen({ onStopRecording = () => {} }: Recordin
             {(location.speed ?? 0) > 0 && (
               <View style={styles.locationRow}>
                 <Text style={styles.locationLabel}>Vel. istantanea:</Text>
-                <Text style={styles.locationValue}>{location.speed!.toFixed(1)} km/h</Text>
+                <Text style={styles.locationValue}>{((location.speed ?? 0) * 3.6).toFixed(1)} km/h</Text>
               </View>
             )}
           </View>
