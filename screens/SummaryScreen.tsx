@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import {
   exportToKML,
   exportToGPX,
@@ -29,6 +31,54 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
   const duration = getRecordingDuration();
   const speed = getAverageSpeed();
   const waypointCount = waypoints.length;
+
+  // Calcola la regione della mappa e il percorso
+  const { mapRegion, mapPoints, startCoordinate, endCoordinate } = useMemo(() => {
+    if (waypoints.length === 0) {
+      return {
+        mapRegion: {
+          latitude: 45.4642,
+          longitude: 9.19,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        mapPoints: [],
+        startCoordinate: null,
+        endCoordinate: null,
+      };
+    }
+
+    const points = waypoints.map(wp => ({
+      latitude: wp.latitude,
+      longitude: wp.longitude,
+    }));
+
+    // Calcola bounding box con un po' di padding
+    const lats = waypoints.map(wp => wp.latitude);
+    const lons = waypoints.map(wp => wp.longitude);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons);
+    const maxLon = Math.max(...lons);
+
+    // Aggiungi padding del 20%
+    const latPadding = (maxLat - minLat) * 0.2 || 0.005;
+    const lonPadding = (maxLon - minLon) * 0.2 || 0.005;
+
+    const region = {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLon + maxLon) / 2,
+      latitudeDelta: Math.max(latPadding * 2, 0.005),
+      longitudeDelta: Math.max(lonPadding * 2, 0.005),
+    };
+
+    return {
+      mapRegion: region,
+      mapPoints: points,
+      startCoordinate: points[0],
+      endCoordinate: points[points.length - 1],
+    };
+  }, [waypoints]);
 
   const handleExportKML = async () => {
     if (waypointCount === 0) {
@@ -104,6 +154,52 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Mappa del percorso */}
+        {waypointCount > 0 && (
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              region={mapRegion}
+              showsUserLocation={false}
+              showsCompass={true}
+              showsScale={true}
+              scrollEnabled={true}
+              zoomEnabled={true}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              {/* Linea del percorso */}
+              {mapPoints.length >= 2 && (
+                <Polyline
+                  coordinates={mapPoints}
+                  strokeColor="#4CAF50"
+                  strokeWidth={4}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )}
+
+              {/* Marker di inizio */}
+              {startCoordinate && (
+                <Marker
+                  coordinate={startCoordinate}
+                  title="Inizio"
+                  description="Punto di partenza"
+                />
+              )}
+
+              {/* Marker di fine */}
+              {endCoordinate && mapPoints.length > 1 && (
+                <Marker
+                  coordinate={endCoordinate}
+                  title="Fine"
+                  description="Punto di arrivo"
+                />
+              )}
+            </MapView>
+          </View>
+        )}
+
         {/* Hero stats */}
         <View style={styles.heroStats}>
           <View style={[styles.heroStatCard, styles.heroStatCardLarge]}>
@@ -209,6 +305,28 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
+  },
+  mapContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    height: 250,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  map: {
+    width: '100%',
+    height: '100%',
   },
   heroIcon: {
     fontSize: 40,
