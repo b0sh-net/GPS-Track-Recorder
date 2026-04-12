@@ -6,6 +6,8 @@ type RecordingState = {
   isRecording: boolean;
   waypoints: LocationData[];
   startTime: number | null;
+  finalDuration: number | null;
+  finalAverageSpeed: number | null;
 };
 
 type Action = {
@@ -23,6 +25,8 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   isRecording: false,
   waypoints: [],
   startTime: null,
+  finalDuration: null,
+  finalAverageSpeed: null,
 
   startRecording: () => {
     console.log('useTrackStore - startRecording called');
@@ -30,13 +34,32 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       isRecording: true,
       waypoints: [],
       startTime: Date.now(),
+      finalDuration: null,
+      finalAverageSpeed: null,
     });
   },
 
   stopRecording: () => {
     console.log('useTrackStore - stopRecording called');
     const { waypoints, startTime } = get();
-    return set({ isRecording: false });
+    
+    // Calcola e salva durata e velocità media finali
+    const duration = startTime ? Date.now() - startTime : 0;
+    let avgSpeed = 0;
+    if (waypoints.length >= 2 && startTime && duration > 0) {
+      const distance = calculateTotalDistance(
+        waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude }))
+      );
+      avgSpeed = (distance / duration) * 3600000;
+    }
+    
+    console.log('useTrackStore - stopRecording final values:', { duration, avgSpeed });
+    
+    return set({
+      isRecording: false,
+      finalDuration: duration,
+      finalAverageSpeed: avgSpeed,
+    });
   },
 
   reset: () => {
@@ -45,6 +68,8 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       isRecording: false,
       waypoints: [],
       startTime: null,
+      finalDuration: null,
+      finalAverageSpeed: null,
     });
   },
 
@@ -66,9 +91,17 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   },
 
   getRecordingDuration: () => {
-    const { startTime } = get();
+    const { startTime, isRecording, finalDuration } = get();
+    
+    // Se la registrazione è ferma, usa il valore finale salvato
+    if (!isRecording && finalDuration !== null) {
+      console.log('useTrackStore - getRecordingDuration using final value:', finalDuration);
+      return finalDuration;
+    }
+    
+    // Altrimenti calcola in tempo reale
     const result = startTime ? Date.now() - startTime : 0;
-    console.log('useTrackStore - getRecordingDuration called:', result);
+    console.log('useTrackStore - getRecordingDuration calculated:', result);
     return result;
   },
 
@@ -87,25 +120,31 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
 
   getAverageSpeed: () => {
     console.log('useTrackStore - getAverageSpeed called');
-    const { startTime, waypoints } = get();
-    
+    const { startTime, waypoints, isRecording, finalAverageSpeed } = get();
+
+    // Se la registrazione è ferma, usa il valore finale salvato
+    if (!isRecording && finalAverageSpeed !== null) {
+      console.log('useTrackStore - getAverageSpeed using final value:', finalAverageSpeed);
+      return finalAverageSpeed;
+    }
+
     // Need at least 2 waypoints to calculate distance
     if (waypoints.length < 2 || !startTime) {
       console.log('useTrackStore - getAverageSpeed: insufficient data, returning 0');
       return 0;
     }
-    
+
     const duration = Date.now() - startTime; // milliseconds
     const distance = calculateTotalDistance(
       waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude }))
     );
-    
+
     // Avoid division by zero
     if (duration <= 0) {
       console.log('useTrackStore - getAverageSpeed: duration is 0, returning 0');
       return 0;
     }
-    
+
     // Convert to km/h: (distance in km / duration in ms) * 3600000 ms/h
     const result = (distance / duration) * 3600000;
     console.log('useTrackStore - getAverageSpeed result:', result, 'distance:', distance, 'duration:', duration);
