@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
   TextInput,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Polyline, Marker } from 'react-native-maps';
@@ -20,13 +21,14 @@ import {
 import useTrackStore from '../hooks/useTrackStore';
 import { formatDuration } from '../lib/gpsUtils';
 import { addComment as sendCommentToBackend } from '../services/backendApi';
+import { BACKEND_URL } from '../config/backend';
 
 type SummaryScreenProps = {
   onReset?: () => void;
 };
 
 export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps) {
-  const { waypoints, getRecordingDuration, getTotalDistance, getAverageSpeed, trackUuid } =
+  const { waypoints, getRecordingDuration, getTotalDistance, getAverageSpeed, trackUuid, trackId } =
     useTrackStore();
 
   const [comment, setComment] = useState('');
@@ -36,6 +38,26 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
   const duration = getRecordingDuration();
   const speed = getAverageSpeed();
   const waypointCount = waypoints.length;
+
+  const handleOpenWebDashboard = async () => {
+    if (!trackId) {
+      Alert.alert('Errore', 'ID traccia non disponibile per la visualizzazione web.');
+      return;
+    }
+
+    const url = `${BACKEND_URL}/track/${trackId}`;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Errore', `Impossibile aprire l'URL: ${url}`);
+      }
+    } catch (error) {
+      console.error('Error opening web dashboard:', error);
+      Alert.alert('Errore', 'Si è verificato un errore durante l\'apertura della pagina web.');
+    }
+  };
 
   const handleAddComment = async () => {
     if (!comment.trim()) {
@@ -262,6 +284,31 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
           </View>
         </View>
 
+        {/* Web Dashboard Link */}
+        {trackId && (
+          <View style={styles.webDashboardSection}>
+            <TouchableOpacity
+              style={styles.webDashboardButton}
+              onPress={handleOpenWebDashboard}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#1a1a2e', '#16213e']}
+                style={styles.webDashboardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.webDashboardIcon}>🌐</Text>
+                <View style={styles.webDashboardTextContainer}>
+                  <Text style={styles.webDashboardTitle}>Visualizza sul Web</Text>
+                  <Text style={styles.webDashboardSubtitle}>Apri la mappa interattiva online</Text>
+                </View>
+                <Text style={styles.webDashboardArrow}>↗</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Comment Section */}
         <View style={styles.commentSection}>
           <Text style={styles.commentTitle}>💬 Aggiungi Commento</Text>
@@ -476,6 +523,53 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: 6,
+  },
+  webDashboardSection: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  webDashboardButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1a1a2e',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  webDashboardGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  webDashboardIcon: {
+    fontSize: 28,
+    marginRight: 14,
+  },
+  webDashboardTextContainer: {
+    flex: 1,
+  },
+  webDashboardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  webDashboardSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  webDashboardArrow: {
+    fontSize: 20,
+    color: '#fff',
+    marginLeft: 8,
+    opacity: 0.8,
   },
   commentSection: {
     paddingHorizontal: 16,

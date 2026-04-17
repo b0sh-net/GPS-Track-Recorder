@@ -6,11 +6,31 @@ import RecordingScreen from './screens/RecordingScreen';
 import SummaryScreen from './screens/SummaryScreen';
 import { useLocation } from './hooks/useLocation';
 import useTrackStore from './hooks/useTrackStore';
+import { registerDevice } from './services/backendApi';
 
 export default function App() {
   const [screen, setScreen] = useState<'home' | 'recording' | 'summary'>('home');
   const { isRecording } = useTrackStore();
   const { error } = useLocation();
+
+  // Registrazione dispositivo all'avvio
+  useEffect(() => {
+    const initApp = async () => {
+      try {
+        console.log('App - Initializing device registration...');
+        const result = await registerDevice();
+        if (result.success) {
+          console.log('App - Device registered successfully');
+        } else {
+          console.warn('App - Device registration failed (check backend)');
+        }
+      } catch (err) {
+        console.error('App - Error during initialization:', err);
+      }
+    };
+    
+    initApp();
+  }, []);
 
   // Log per debug
   useEffect(() => {

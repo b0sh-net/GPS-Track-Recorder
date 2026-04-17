@@ -10,6 +10,7 @@ type RecordingState = {
   finalDuration: number | null;
   finalAverageSpeed: number | null;
   trackUuid: string | null; // UUID from backend
+  trackId: number | null; // Numeric ID from backend for web links
   waypointSequence: number; // Sequence counter for backend
   syncWithBackend: boolean; // Whether to sync with backend
 };
@@ -32,6 +33,7 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   finalDuration: null,
   finalAverageSpeed: null,
   trackUuid: null,
+  trackId: null,
   waypointSequence: 0,
   syncWithBackend: true, // Enable by default
 
@@ -40,12 +42,14 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     
     // Start track on backend
     let trackUuid = null;
+    let trackId = null;
     if (get().syncWithBackend) {
       try {
         const result = await startTrack();
         if (result.success) {
           trackUuid = result.trackUuid || null;
-          console.log('Backend track started:', trackUuid);
+          trackId = result.trackId || null;
+          console.log('Backend track started:', { trackUuid, trackId });
         }
       } catch (error) {
         console.error('Failed to start backend track:', error);
@@ -59,6 +63,7 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       finalDuration: null,
       finalAverageSpeed: null,
       trackUuid,
+      trackId,
       waypointSequence: 0,
     });
   },
