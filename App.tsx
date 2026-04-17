@@ -18,16 +18,16 @@ export default function App() {
   }, [screen, isRecording]);
 
   // Avvia registrazione
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
     console.log('App - handleStartRecording called');
-    useTrackStore.getState().startRecording();
+    await useTrackStore.getState().startRecording();
     setScreen('recording');
   };
 
   // Ferma registrazione
-  const handleStopRecording = () => {
+  const handleStopRecording = async () => {
     console.log('App - handleStopRecording called');
-    useTrackStore.getState().stopRecording();
+    await useTrackStore.getState().stopRecording();
     setScreen('summary');
   };
 

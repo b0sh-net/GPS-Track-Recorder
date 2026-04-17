@@ -54,9 +54,9 @@ export default function RecordingScreen({ onStopRecording = () => {} }: Recordin
   const distance = getTotalDistance();
   const speed = getAverageSpeed();
 
-  const handleStopRecording = () => {
+  const handleStopRecording = async () => {
     console.log('Handle stop recording called');
-    useTrackStore.getState().stopRecording();
+    await useTrackStore.getState().stopRecording();
     onStopRecording();
   };
 

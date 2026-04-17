@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { LocationData } from '../hooks/useLocation';
 import { calculateTotalDistance } from '../lib/gpsUtils';
+import { startTrack, addWaypoint as sendWaypointToBackend, completeTrack } from '../services/backendApi';
 
 type RecordingState = {
   isRecording: boolean;
@@ -8,11 +9,14 @@ type RecordingState = {
   startTime: number | null;
   finalDuration: number | null;
   finalAverageSpeed: number | null;
+  trackUuid: string | null; // UUID from backend
+  waypointSequence: number; // Sequence counter for backend
+  syncWithBackend: boolean; // Whether to sync with backend
 };
 
 type Action = {
-  startRecording: () => void;
-  stopRecording: () => void;
+  startRecording: () => Promise<void>;
+  stopRecording: () => Promise<void>;
   reset: () => void;
   addWaypoint: (waypoint: LocationData) => void;
   getRecordingDuration: () => number;
@@ -27,35 +31,82 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   startTime: null,
   finalDuration: null,
   finalAverageSpeed: null,
+  trackUuid: null,
+  waypointSequence: 0,
+  syncWithBackend: true, // Enable by default
 
-  startRecording: () => {
+  startRecording: async () => {
     console.log('useTrackStore - startRecording called');
+    
+    // Start track on backend
+    let trackUuid = null;
+    if (get().syncWithBackend) {
+      try {
+        const result = await startTrack();
+        if (result.success) {
+          trackUuid = result.trackUuid || null;
+          console.log('Backend track started:', trackUuid);
+        }
+      } catch (error) {
+        console.error('Failed to start backend track:', error);
+      }
+    }
+
     set({
       isRecording: true,
       waypoints: [],
       startTime: Date.now(),
       finalDuration: null,
       finalAverageSpeed: null,
+      trackUuid,
+      waypointSequence: 0,
     });
   },
 
-  stopRecording: () => {
+  stopRecording: async () => {
     console.log('useTrackStore - stopRecording called');
-    const { waypoints, startTime } = get();
-    
+    const { waypoints, startTime, trackUuid, syncWithBackend } = get();
+
     // Calcola e salva durata e velocità media finali
     const duration = startTime ? Date.now() - startTime : 0;
     let avgSpeed = 0;
+    let maxSpeed = 0;
+    let totalDistance = 0;
+    
     if (waypoints.length >= 2 && startTime && duration > 0) {
-      const distance = calculateTotalDistance(
+      totalDistance = calculateTotalDistance(
         waypoints.map(wp => ({ lat: wp.latitude, lon: wp.longitude }))
       );
-      avgSpeed = (distance / duration) * 3600000;
+      avgSpeed = (totalDistance / duration) * 3600000;
+      
+      // Calculate max speed
+      const speeds = waypoints
+        .map(wp => wp.speed)
+        .filter((s): s is number => s !== undefined && s !== null);
+      
+      if (speeds.length > 0) {
+        maxSpeed = Math.max(...speeds) * 3.6; // Convert m/s to km/h
+      }
     }
-    
-    console.log('useTrackStore - stopRecording final values:', { duration, avgSpeed });
-    
-    return set({
+
+    console.log('useTrackStore - stopRecording final values:', { duration, avgSpeed, totalDistance, maxSpeed });
+
+    // Complete track on backend
+    if (syncWithBackend && trackUuid) {
+      try {
+        await completeTrack(trackUuid, {
+          durationSeconds: Math.floor(duration / 1000),
+          totalDistanceKm: totalDistance,
+          averageSpeedKmh: avgSpeed,
+          maxSpeedKmh: maxSpeed,
+        });
+        console.log('Backend track completed');
+      } catch (error) {
+        console.error('Failed to complete backend track:', error);
+      }
+    }
+
+    set({
       isRecording: false,
       finalDuration: duration,
       finalAverageSpeed: avgSpeed,
@@ -73,21 +124,35 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     });
   },
 
-  addWaypoint: (waypoint) => {
+  addWaypoint: async (waypoint) => {
     console.log('useTrackStore - addWaypoint called', waypoint);
-    const { waypoints } = get();
+    const { waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
+    
     // Cap array to prevent memory issues on long recordings
     const newWaypoints = waypoints.length > 10000
       ? [...waypoints.slice(-8000), waypoint]
       : [...waypoints, waypoint];
-    return set({ waypoints: newWaypoints });
+    
+    // Send waypoint to backend
+    if (syncWithBackend && trackUuid) {
+      try {
+        await sendWaypointToBackend(trackUuid, waypoint, waypointSequence);
+      } catch (error) {
+        console.error('Failed to send waypoint to backend:', error);
+      }
+    }
+
+    set({ 
+      waypoints: newWaypoints,
+      waypointSequence: waypointSequence + 1,
+    });
   },
 
   clearWaypoints: () => {
     console.log('useTrackStore - clearWaypoints called');
     const { waypoints } = get();
     // Mantieni solo i punti più recenti (ultimo 50)
-    return set({ waypoints: waypoints.slice(-50) });
+    set({ waypoints: waypoints.slice(-50) });
   },
 
   getRecordingDuration: () => {

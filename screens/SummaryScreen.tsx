@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Polyline, Marker } from 'react-native-maps';
@@ -18,19 +19,49 @@ import {
 } from '../lib/exportUtils';
 import useTrackStore from '../hooks/useTrackStore';
 import { formatDuration } from '../lib/gpsUtils';
+import { addComment as sendCommentToBackend } from '../services/backendApi';
 
 type SummaryScreenProps = {
   onReset?: () => void;
 };
 
 export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps) {
-  const { waypoints, getRecordingDuration, getTotalDistance, getAverageSpeed } =
+  const { waypoints, getRecordingDuration, getTotalDistance, getAverageSpeed, trackUuid } =
     useTrackStore();
+
+  const [comment, setComment] = useState('');
+  const [commentSubmitted, setCommentSubmitted] = useState(false);
 
   const distance = getTotalDistance();
   const duration = getRecordingDuration();
   const speed = getAverageSpeed();
   const waypointCount = waypoints.length;
+
+  const handleAddComment = async () => {
+    if (!comment.trim()) {
+      Alert.alert('Errore', 'Il commento non può essere vuoto.');
+      return;
+    }
+
+    try {
+      if (trackUuid) {
+        const result = await sendCommentToBackend(trackUuid, comment);
+        if (result.success) {
+          setCommentSubmitted(true);
+          Alert.alert('Successo', 'Commento aggiunto e salvato nel backend.');
+        } else {
+          Alert.alert('Errore', 'Impossibile salvare il commento nel backend.');
+        }
+      } else {
+        // Store locally if no backend track UUID
+        setCommentSubmitted(true);
+        Alert.alert('Info', 'Commento aggiunto localmente (nessun backend configurato).');
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      Alert.alert('Errore', 'Errore durante il salvataggio del commento.');
+    }
+  };
 
   // Calcola la regione della mappa e il percorso
   const { mapRegion, mapPoints, startCoordinate, endCoordinate } = useMemo(() => {
@@ -231,6 +262,38 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
           </View>
         </View>
 
+        {/* Comment Section */}
+        <View style={styles.commentSection}>
+          <Text style={styles.commentTitle}>💬 Aggiungi Commento</Text>
+          <TextInput
+            style={styles.commentInput}
+            multiline
+            numberOfLines={3}
+            maxLength={1000}
+            placeholder="Aggiungi un commento alla traccia..."
+            placeholderTextColor="#999"
+            value={comment}
+            onChangeText={setComment}
+            editable={!commentSubmitted}
+          />
+          {!commentSubmitted && (
+            <TouchableOpacity
+              style={[styles.commentButton, !comment.trim() && styles.commentButtonDisabled]}
+              onPress={handleAddComment}
+              disabled={!comment.trim()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.commentButtonText}>Salva Commento</Text>
+            </TouchableOpacity>
+          )}
+          {commentSubmitted && (
+            <View style={styles.commentSuccess}>
+              <Text style={styles.commentSuccessIcon}>✅</Text>
+              <Text style={styles.commentSuccessText}>Commento salvato con successo!</Text>
+            </View>
+          )}
+        </View>
+
         {/* Export section */}
         <View style={styles.exportSection}>
           <Text style={styles.exportTitle}>Esporta Traccia</Text>
@@ -413,6 +476,60 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: 6,
+  },
+  commentSection: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  commentTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginBottom: 12,
+  },
+  commentInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 14,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    textAlignVertical: 'top',
+    minHeight: 80,
+  },
+  commentButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+    elevation: 3,
+  },
+  commentButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  commentButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  commentSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 12,
+  },
+  commentSuccessIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  commentSuccessText: {
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '600',
   },
   exportSection: {
     paddingHorizontal: 16,
