@@ -10,12 +10,6 @@ A React Native mobile application built with Expo for recording real-time GPS tr
 - **📤 Export** – Export tracks to KML or GPX formats via `expo-sharing`
 - **🔄 Reset** – Clear recorded track and start fresh
 
-## Screenshots
-
-| Recording | Summary with Map |
-|-----------|------------------|
-| Real-time GPS tracking | Route visualization |
-
 ## Architecture
 
 ```
