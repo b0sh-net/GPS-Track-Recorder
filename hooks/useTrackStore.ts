@@ -84,14 +84,11 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       );
       avgSpeed = (totalDistance / duration) * 3600000;
       
-      // Calculate max speed
-      const speeds = waypoints
-        .map(wp => wp.speed)
-        .filter((s): s is number => s !== undefined && s !== null);
-      
-      if (speeds.length > 0) {
-        maxSpeed = Math.max(...speeds) * 3.6; // Convert m/s to km/h
-      }
+      // Calculate max speed safely without spread operator
+      maxSpeed = waypoints.reduce((max, wp) => {
+        const speed = (wp.speed ?? 0) * 3.6;
+        return speed > max ? speed : max;
+      }, 0);
     }
 
     console.log('useTrackStore - stopRecording final values:', { duration, avgSpeed, totalDistance, maxSpeed });

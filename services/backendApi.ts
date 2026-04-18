@@ -12,6 +12,19 @@ const isBackendConfigured = (): boolean => {
 };
 
 /**
+ * Helper to safely parse JSON response
+ */
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Failed to parse JSON response:', text.substring(0, 100));
+    return { success: false, message: 'Invalid server response' };
+  }
+};
+
+/**
  * Register the device with the backend
  */
 export const registerDevice = async (deviceName?: string): Promise<{ success: boolean; deviceId?: string }> => {
@@ -36,7 +49,7 @@ export const registerDevice = async (deviceName?: string): Promise<{ success: bo
       }),
     });
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
     console.log('Device registered:', data);
     
     return {
@@ -66,7 +79,7 @@ export const getDeviceStatus = async (): Promise<{
   try {
     const deviceId = await getDeviceId();
     const response = await fetch(API_ENDPOINTS.GET_DEVICE_STATUS(deviceId));
-    const data = await response.json();
+    const data = await safeJsonParse(response);
 
     return {
       success: data.success,
@@ -103,7 +116,7 @@ export const startTrack = async (): Promise<{ success: boolean; trackUuid?: stri
       }),
     });
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
     console.log('Track started:', data);
     
     return {
@@ -148,7 +161,7 @@ export const addWaypoint = async (
       }),
     });
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
     console.log('Waypoint added:', data);
     
     return {
@@ -191,7 +204,7 @@ export const completeTrack = async (
       }),
     });
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
     console.log('Track completed:', data);
     
     return {
@@ -225,7 +238,7 @@ export const addComment = async (
       }),
     });
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
     console.log('Comment added:', data);
     
     return {

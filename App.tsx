@@ -48,7 +48,10 @@ export default function App() {
   // Ferma registrazione
   const handleStopRecording = async () => {
     console.log('App - handleStopRecording called');
-    await useTrackStore.getState().stopRecording();
+    const { isRecording } = useTrackStore.getState();
+    if (isRecording) {
+      await useTrackStore.getState().stopRecording();
+    }
     setScreen('summary');
   };
 
