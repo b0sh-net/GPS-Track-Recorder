@@ -33,6 +33,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 
   const [comment, setComment] = useState('');
   const [commentSubmitted, setCommentSubmitted] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   const distance = getTotalDistance();
   const duration = getRecordingDuration();
@@ -227,7 +228,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Mappa del percorso */}
-        {waypointCount > 0 && (
+        {waypointCount > 0 && !mapError && (
           <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
@@ -239,6 +240,10 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
               zoomEnabled={true}
               rotateEnabled={false}
               pitchEnabled={false}
+              onError={(error) => {
+                console.error('MapView Error:', error);
+                setMapError(true);
+              }}
             >
               {/* Linea del percorso */}
               {displayPoints.length >= 2 && (
@@ -269,6 +274,14 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
                 />
               )}
             </MapView>
+          </View>
+        )}
+
+        {mapError && (
+          <View style={[styles.mapContainer, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+            <Text style={{ fontSize: 16, textAlign: 'center', color: '#666' }}>
+              ⚠️ Impossibile caricare la mappa.{'\n'}Controlla la chiave API di Google Maps.
+            </Text>
           </View>
         )}
 

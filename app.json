@@ -32,7 +32,12 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_TYPE_LOCATION"
       ],
-      "package": "com.gpstrackrecorder.app"
+      "package": "com.gpstrackrecorder.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "PUT_YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
