@@ -21,6 +21,7 @@ export default function App() {
         const result = await registerDevice();
         if (result.success) {
           console.log('App - Device registered successfully');
+          // Dispatch a custom event or just let screens handle their own init
         } else {
           console.warn('App - Device registration failed (check backend)');
         }

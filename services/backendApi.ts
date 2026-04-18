@@ -50,6 +50,38 @@ export const registerDevice = async (deviceName?: string): Promise<{ success: bo
 };
 
 /**
+ * Get the current association status of the device
+ */
+export const getDeviceStatus = async (): Promise<{
+  success: boolean;
+  isRegistered: boolean;
+  isClaimed: boolean;
+  ownerName?: string | null;
+  claimUrl?: string;
+}> => {
+  if (!isBackendConfigured()) {
+    return { success: false, isRegistered: false, isClaimed: false };
+  }
+
+  try {
+    const deviceId = await getDeviceId();
+    const response = await fetch(API_ENDPOINTS.GET_DEVICE_STATUS(deviceId));
+    const data = await response.json();
+
+    return {
+      success: data.success,
+      isRegistered: data.is_registered,
+      isClaimed: data.is_claimed,
+      ownerName: data.owner_name,
+      claimUrl: data.claim_url,
+    };
+  } catch (error) {
+    console.error('Error getting device status:', error);
+    return { success: false, isRegistered: false, isClaimed: false };
+  }
+};
+
+/**
  * Start a new track on the backend
  */
 export const startTrack = async (): Promise<{ success: boolean; trackUuid?: string; trackId?: number }> => {

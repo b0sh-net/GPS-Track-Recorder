@@ -1,12 +1,85 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Linking, RefreshControl, AppState } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getDeviceStatus } from '../services/backendApi';
 
 type HomeScreenProps = {
   onStartRecording?: () => void;
 };
 
 export default function HomeScreen({ onStartRecording = () => {} }: HomeScreenProps) {
+  const [deviceStatus, setDeviceStatus] = useState<{
+    isClaimed: boolean;
+    ownerName?: string | null;
+    claimUrl?: string;
+  } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const appState = useRef(AppState.currentState);
+
+  const checkStatus = useCallback(async () => {
+    console.log('HomeScreen - Checking device status...');
+    const status = await getDeviceStatus();
+    if (status.success) {
+      console.log('HomeScreen - Device status received:', status);
+      setDeviceStatus({
+        isClaimed: status.isClaimed,
+        ownerName: status.ownerName,
+        claimUrl: status.claimUrl,
+      });
+    } else {
+      console.warn('HomeScreen - Failed to get device status from backend');
+    }
+  }, []);
+
+  useEffect(() => {
+    checkStatus();
+
+    // Listen for app state changes (to refresh when coming back from browser)
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('HomeScreen - App has come to the foreground, refreshing status...');
+        checkStatus();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [checkStatus]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await checkStatus();
+    setRefreshing(false);
+  }, [checkStatus]);
+
+  const handleClaimDevice = async () => {
+    console.log('HomeScreen - handleClaimDevice called', deviceStatus);
+    
+    if (deviceStatus?.claimUrl) {
+      try {
+        const url = deviceStatus.claimUrl;
+        console.log('HomeScreen - Attempting to open URL:', url);
+        
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+          await Linking.openURL(url);
+        } else {
+          console.warn('HomeScreen - Cannot open URL:', url);
+          // Fallback: try opening anyway as canOpenURL can sometimes fail on Android
+          await Linking.openURL(url);
+        }
+      } catch (error) {
+        console.error('HomeScreen - Error opening claim URL:', error);
+      }
+    } else {
+      console.warn('HomeScreen - No claimUrl available in deviceStatus');
+    }
+  };
   return (
     <View style={styles.container}>
       {/* Header with gradient */}
@@ -26,7 +99,46 @@ export default function HomeScreen({ onStartRecording = () => {} }: HomeScreenPr
       </LinearGradient>
 
       {/* Main content */}
-      <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.mainContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Device Association Alert */}
+        {deviceStatus && !deviceStatus.isClaimed && (
+          <View style={styles.alertContainer}>
+            <LinearGradient
+              colors={['#FFF9C4', '#FFF59D']}
+              style={styles.alert}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <View style={styles.alertContent}>
+                <Text style={styles.alertIcon}>⚠️</Text>
+                <View style={styles.alertTextContainer}>
+                  <Text style={styles.alertTitle}>Dispositivo non associato</Text>
+                  <Text style={styles.alertDesc}>
+                    Associa questo dispositivo al tuo account per salvare le tracce permanentemente.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.alertButton} onPress={handleClaimDevice}>
+                <Text style={styles.alertButtonText}>ASSOCIA ORA</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        )}
+
+        {deviceStatus && deviceStatus.isClaimed && (
+          <View style={styles.ownerContainer}>
+            <Text style={styles.ownerText}>
+              👤 Associato a: <Text style={styles.ownerName}>{deviceStatus.ownerName || 'Utente'}</Text>
+            </Text>
+          </View>
+        )}
+
         {/* Features cards */}
         <View style={styles.featuresContainer}>
           <Text style={styles.sectionTitle}>Funzionalità</Text>
@@ -145,6 +257,63 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1a1a2e',
     marginBottom: 16,
+  },
+  alertContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  alert: {
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#FBC02D',
+  },
+  alertContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  alertIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  alertTextContainer: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginBottom: 2,
+  },
+  alertDesc: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
+  },
+  alertButton: {
+    backgroundColor: '#1a1a2e',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  alertButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  ownerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  ownerText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  ownerName: {
+    fontWeight: '700',
+    color: '#1a1a2e',
   },
   featureCard: {
     flexDirection: 'row',

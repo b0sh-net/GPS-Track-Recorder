@@ -2,6 +2,7 @@ export const BACKEND_URL = 'https://gps.b0sh.net';
 
 export const API_ENDPOINTS = {
   REGISTER_DEVICE: `${BACKEND_URL}/api/device/register`,
+  GET_DEVICE_STATUS: (deviceId: string) => `${BACKEND_URL}/api/device/status?device_id=${deviceId}`,
   START_TRACK: `${BACKEND_URL}/api/track/start`,
   ADD_WAYPOINT: (trackUuid: string) => `${BACKEND_URL}/api/track/${trackUuid}/waypoint`,
   COMPLETE_TRACK: (trackUuid: string) => `${BACKEND_URL}/api/track/${trackUuid}/complete`,
