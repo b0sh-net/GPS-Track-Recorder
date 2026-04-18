@@ -86,7 +86,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
   };
 
   // Calcola la regione della mappa e il percorso
-  const { mapRegion, mapPoints, startCoordinate, endCoordinate } = useMemo(() => {
+  const { mapRegion, displayPoints, startCoordinate, endCoordinate } = useMemo(() => {
     if (waypoints.length === 0) {
       return {
         mapRegion: {
@@ -95,7 +95,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         },
-        mapPoints: [],
+        displayPoints: [],
         startCoordinate: null,
         endCoordinate: null,
       };
@@ -106,13 +106,32 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
       longitude: wp.longitude,
     }));
 
-    // Calcola bounding box con un po' di padding
-    const lats = waypoints.map(wp => wp.latitude);
-    const lons = waypoints.map(wp => wp.longitude);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLon = Math.min(...lons);
-    const maxLon = Math.max(...lons);
+    // Downsample points for map visualization if there are too many
+    // This prevents GPU crashes on Android for very long tracks
+    const maxMapPoints = 1000;
+    let displayPoints = points;
+    if (points.length > maxMapPoints) {
+      const step = Math.ceil(points.length / maxMapPoints);
+      displayPoints = points.filter((_, index) => index % step === 0);
+      // Ensure the last point is always included
+      if (displayPoints[displayPoints.length - 1] !== points[points.length - 1]) {
+        displayPoints.push(points[points.length - 1]);
+      }
+    }
+
+    // Calcola bounding box senza usare lo spread operator (per evitare stack overflow)
+    let minLat = waypoints[0].latitude;
+    let maxLat = waypoints[0].latitude;
+    let minLon = waypoints[0].longitude;
+    let maxLon = waypoints[0].longitude;
+
+    for (let i = 1; i < waypoints.length; i++) {
+      const wp = waypoints[i];
+      if (wp.latitude < minLat) minLat = wp.latitude;
+      if (wp.latitude > maxLat) maxLat = wp.latitude;
+      if (wp.longitude < minLon) minLon = wp.longitude;
+      if (wp.longitude > maxLon) maxLon = wp.longitude;
+    }
 
     // Aggiungi padding del 20%
     const latPadding = (maxLat - minLat) * 0.2 || 0.005;
@@ -127,7 +146,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 
     return {
       mapRegion: region,
-      mapPoints: points,
+      displayPoints,
       startCoordinate: points[0],
       endCoordinate: points[points.length - 1],
     };
@@ -222,9 +241,9 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
               pitchEnabled={false}
             >
               {/* Linea del percorso */}
-              {mapPoints.length >= 2 && (
+              {displayPoints.length >= 2 && (
                 <Polyline
-                  coordinates={mapPoints}
+                  coordinates={displayPoints}
                   strokeColor="#4CAF50"
                   strokeWidth={4}
                   lineCap="round"
