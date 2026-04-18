@@ -88,69 +88,79 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 
   // Calcola la regione della mappa e il percorso
   const { mapRegion, displayPoints, startCoordinate, endCoordinate } = useMemo(() => {
-    if (waypoints.length === 0) {
+    try {
+      if (!waypoints || waypoints.length === 0) {
+        return {
+          mapRegion: {
+            latitude: 45.4642,
+            longitude: 9.19,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          displayPoints: [],
+          startCoordinate: null,
+          endCoordinate: null,
+        };
+      }
+
+      const points = waypoints
+        .filter(wp => wp && typeof wp.latitude === 'number' && typeof wp.longitude === 'number')
+        .map(wp => ({
+          latitude: wp.latitude,
+          longitude: wp.longitude,
+        }));
+
+      if (points.length === 0) {
+        throw new Error('No valid points');
+      }
+
+      // Downsample points for map visualization if there are too many
+      const maxMapPoints = 1000;
+      let dPoints = points;
+      if (points.length > maxMapPoints) {
+        const step = Math.ceil(points.length / maxMapPoints);
+        dPoints = points.filter((_, index) => index % step === 0);
+        if (dPoints[dPoints.length - 1] !== points[points.length - 1]) {
+          dPoints.push(points[points.length - 1]);
+        }
+      }
+
+      let minLat = points[0].latitude;
+      let maxLat = points[0].latitude;
+      let minLon = points[0].longitude;
+      let maxLon = points[0].longitude;
+
+      for (let i = 1; i < points.length; i++) {
+        const wp = points[i];
+        if (wp.latitude < minLat) minLat = wp.latitude;
+        if (wp.latitude > maxLat) maxLat = wp.latitude;
+        if (wp.longitude < minLon) minLon = wp.longitude;
+        if (wp.longitude > maxLon) maxLon = wp.longitude;
+      }
+
+      const latPadding = (maxLat - minLat) * 0.2 || 0.005;
+      const lonPadding = (maxLon - minLon) * 0.2 || 0.005;
+
       return {
         mapRegion: {
-          latitude: 45.4642,
-          longitude: 9.19,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
+          latitude: (minLat + maxLat) / 2,
+          longitude: (minLon + maxLon) / 2,
+          latitudeDelta: Math.max(latPadding * 2, 0.005),
+          longitudeDelta: Math.max(lonPadding * 2, 0.005),
         },
+        displayPoints: dPoints,
+        startCoordinate: points[0],
+        endCoordinate: points[points.length - 1],
+      };
+    } catch (e) {
+      console.error('Error calculating map data:', e);
+      return {
+        mapRegion: { latitude: 0, longitude: 0, latitudeDelta: 0.01, longitudeDelta: 0.01 },
         displayPoints: [],
         startCoordinate: null,
-        endCoordinate: null,
+        endCoordinate: null
       };
     }
-
-    const points = waypoints.map(wp => ({
-      latitude: wp.latitude,
-      longitude: wp.longitude,
-    }));
-
-    // Downsample points for map visualization if there are too many
-    // This prevents GPU crashes on Android for very long tracks
-    const maxMapPoints = 1000;
-    let displayPoints = points;
-    if (points.length > maxMapPoints) {
-      const step = Math.ceil(points.length / maxMapPoints);
-      displayPoints = points.filter((_, index) => index % step === 0);
-      // Ensure the last point is always included
-      if (displayPoints[displayPoints.length - 1] !== points[points.length - 1]) {
-        displayPoints.push(points[points.length - 1]);
-      }
-    }
-
-    // Calcola bounding box senza usare lo spread operator (per evitare stack overflow)
-    let minLat = waypoints[0].latitude;
-    let maxLat = waypoints[0].latitude;
-    let minLon = waypoints[0].longitude;
-    let maxLon = waypoints[0].longitude;
-
-    for (let i = 1; i < waypoints.length; i++) {
-      const wp = waypoints[i];
-      if (wp.latitude < minLat) minLat = wp.latitude;
-      if (wp.latitude > maxLat) maxLat = wp.latitude;
-      if (wp.longitude < minLon) minLon = wp.longitude;
-      if (wp.longitude > maxLon) maxLon = wp.longitude;
-    }
-
-    // Aggiungi padding del 20%
-    const latPadding = (maxLat - minLat) * 0.2 || 0.005;
-    const lonPadding = (maxLon - minLon) * 0.2 || 0.005;
-
-    const region = {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLon + maxLon) / 2,
-      latitudeDelta: Math.max(latPadding * 2, 0.005),
-      longitudeDelta: Math.max(lonPadding * 2, 0.005),
-    };
-
-    return {
-      mapRegion: region,
-      displayPoints,
-      startCoordinate: points[0],
-      endCoordinate: points[points.length - 1],
-    };
   }, [waypoints]);
 
   const handleExportKML = async () => {
@@ -227,8 +237,8 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Mappa del percorso */}
-        {waypointCount > 0 && !mapError && (
+        {/* Mappa del percorso (DISABILITATA PER DEBUG) */}
+        {false && waypointCount > 0 && !mapError && (
           <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
@@ -266,7 +276,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
               )}
 
               {/* Marker di fine */}
-              {endCoordinate && mapPoints.length > 1 && (
+              {endCoordinate && displayPoints.length > 1 && (
                 <Marker
                   coordinate={endCoordinate}
                   title="Fine"
@@ -276,6 +286,15 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
             </MapView>
           </View>
         )}
+
+        <View style={[styles.mapContainer, { backgroundColor: '#e8f5e9', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+            <Text style={{ fontSize: 16, textAlign: 'center', color: '#2E7D32', fontWeight: 'bold' }}>
+              📍 Traccia registrata con successo!{'\n'}
+              <Text style={{ fontSize: 13, fontWeight: 'normal', color: '#666' }}>
+                (Mappa temporaneamente disabilitata per test di stabilità)
+              </Text>
+            </Text>
+        </View>
 
         {mapError && (
           <View style={[styles.mapContainer, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>

@@ -48,11 +48,21 @@ export default function App() {
   // Ferma registrazione
   const handleStopRecording = async () => {
     console.log('App - handleStopRecording called');
-    const { isRecording } = useTrackStore.getState();
-    if (isRecording) {
-      await useTrackStore.getState().stopRecording();
+    try {
+      const { isRecording } = useTrackStore.getState();
+      if (isRecording) {
+        await useTrackStore.getState().stopRecording();
+      }
+      
+      // Aggiungi un piccolo delay di sicurezza prima di cambiare schermata
+      // Questo previene crash dovuti a transizioni troppo rapide su certi dispositivi Android
+      setTimeout(() => {
+        setScreen('summary');
+      }, 500);
+    } catch (err) {
+      console.error('App - Error during stop recording:', err);
+      setScreen('summary'); // Tenta comunque di mostrare il riepilogo
     }
-    setScreen('summary');
   };
 
   // Reset
