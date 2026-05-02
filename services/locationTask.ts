@@ -16,24 +16,22 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     if (locations && locations.length > 0) {
       console.log(`Background Location - Received ${locations.length} new locations`);
       
-      const { isRecording, addWaypoint } = useTrackStore.getState();
+      const { isRecording, addWaypoints } = useTrackStore.getState();
       
       // Procediamo solo se la registrazione è effettivamente attiva
       if (isRecording) {
-        for (const location of locations) {
-          const waypoint: LocationData = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            accuracy: location.coords.accuracy ?? 0,
-            timestamp: location.timestamp,
-            altitude: location.coords.altitude ?? undefined,
-            heading: location.coords.heading ?? undefined,
-            speed: location.coords.speed ?? undefined,
-          };
-          
-          // Aggiunge il punto allo store e lo invia al backend
-          await addWaypoint(waypoint);
-        }
+        const waypoints: LocationData[] = locations.map(location => ({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          accuracy: location.coords.accuracy ?? 0,
+          timestamp: location.timestamp,
+          altitude: location.coords.altitude ?? undefined,
+          heading: location.coords.heading ?? undefined,
+          speed: location.coords.speed ?? undefined,
+        }));
+        
+        // Aggiunge i punti allo store in batch e li invia al backend
+        await addWaypoints(waypoints);
       } else {
         console.log('Background Location - Received location but isRecording is false, stopping updates');
         // Se per qualche motivo il task gira ma non stiamo registrando, fermiamolo

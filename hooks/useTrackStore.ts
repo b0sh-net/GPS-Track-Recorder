@@ -11,8 +11,8 @@ type RecordingState = {
   startTime: number | null;
   finalDuration: number | null;
   finalAverageSpeed: number | null;
-  trackUuid: string | null; // UUID from backend
-  trackId: number | null; // Numeric ID from backend for web links
+  trackUuid: string | null; // Unique UUID from backend for identification and web links
+  trackId: number | null; // Numeric ID from backend (internal use)
   waypointSequence: number; // Sequence counter for backend
   syncWithBackend: boolean; // Whether to sync with backend
 };
@@ -109,6 +109,10 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     console.log('useTrackStore - stopRecording called');
     const { waypoints, startTime, trackUuid, syncWithBackend } = get();
 
+    // Imposta immediatamente lo stato di registrazione a false per evitare race condition
+    // con il background task che potrebbe aggiungere waypoint mentre stiamo chiudendo
+    set({ isRecording: false });
+
     // Ferma il tracking in background
     try {
       console.log('useTrackStore - Stopping background location updates');
@@ -154,7 +158,6 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     }
 
     set({
-      isRecording: false,
       finalDuration: duration,
       finalAverageSpeed: avgSpeed,
     });
@@ -168,13 +171,22 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       startTime: null,
       finalDuration: null,
       finalAverageSpeed: null,
+      trackUuid: null,
+      trackId: null,
+      waypointSequence: 0,
     });
   },
 
   addWaypoint: async (waypoint) => {
     console.log('useTrackStore - addWaypoint called', waypoint);
-    const { waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
+    const { isRecording, waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
     
+    // Defensive check: don't add waypoints if not recording
+    if (!isRecording) {
+      console.log('useTrackStore - addWaypoint called while not recording, ignoring');
+      return;
+    }
+
     // Cap array to prevent memory issues on long recordings
     const newWaypoints = waypoints.length > 10000
       ? [...waypoints.slice(-8000), waypoint]
@@ -195,11 +207,44 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     });
   },
 
+  addWaypoints: async (newWaypointsBatch) => {
+    console.log(`useTrackStore - addWaypoints called with ${newWaypointsBatch.length} points`);
+    const { isRecording, waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
+
+    if (!isRecording || newWaypointsBatch.length === 0) {
+      return;
+    }
+
+    // Prepariamo i waypoint con i loro numeri di sequenza
+    const waypointsWithSequence = newWaypointsBatch.map((wp, index) => ({
+      location: wp,
+      sequence: waypointSequence + index
+    }));
+
+    // Aggiorniamo lo stato locale
+    const combinedWaypoints = waypoints.length + newWaypointsBatch.length > 10000
+      ? [...waypoints.slice(-(8000 - newWaypointsBatch.length)), ...newWaypointsBatch]
+      : [...waypoints, ...newWaypointsBatch];
+
+    // Invia al backend in batch
+    if (syncWithBackend && trackUuid) {
+      try {
+        await batchWaypoints(trackUuid, waypointsWithSequence);
+      } catch (error) {
+        console.error('Failed to send batch waypoints to backend:', error);
+      }
+    }
+
+    set({
+      waypoints: combinedWaypoints,
+      waypointSequence: waypointSequence + newWaypointsBatch.length,
+    });
+  },
+
   clearWaypoints: () => {
     console.log('useTrackStore - clearWaypoints called');
-    const { waypoints } = get();
-    // Mantieni solo i punti più recenti (ultimo 50)
-    set({ waypoints: waypoints.slice(-50) });
+    // Cancella realmente tutti i waypoint
+    set({ waypoints: [] });
   },
 
   getRecordingDuration: () => {

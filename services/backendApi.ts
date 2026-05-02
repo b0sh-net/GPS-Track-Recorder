@@ -175,6 +175,50 @@ export const addWaypoint = async (
 };
 
 /**
+ * Add multiple waypoints to the current track in a single request
+ */
+export const batchWaypoints = async (
+  trackUuid: string,
+  waypoints: Array<{ location: LocationData; sequence: number }>
+): Promise<{ success: boolean }> => {
+  if (!isBackendConfigured() || waypoints.length === 0) {
+    return { success: false };
+  }
+
+  try {
+    const response = await fetch(API_ENDPOINTS.BATCH_WAYPOINTS(trackUuid), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        waypoints: waypoints.map(wp => ({
+          latitude: wp.location.latitude,
+          longitude: wp.location.longitude,
+          altitude: wp.location.altitude,
+          speed_ms: wp.location.speed,
+          speed_kmh: wp.location.speed ? wp.location.speed * 3.6 : undefined,
+          accuracy: wp.location.accuracy,
+          heading: wp.location.heading,
+          timestamp: wp.location.timestamp,
+          sequence: wp.sequence,
+        })),
+      }),
+    });
+
+    const data = await safeJsonParse(response);
+    console.log('Batch waypoints added:', data);
+    
+    return {
+      success: data.success,
+    };
+  } catch (error) {
+    console.error('Error batching waypoints:', error);
+    return { success: false };
+  }
+};
+
+/**
  * Complete the track on the backend
  */
 export const completeTrack = async (

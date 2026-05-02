@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   GET_DEVICE_STATUS: (deviceId: string) => `${BACKEND_URL}/api/device/status?device_id=${deviceId}`,
   START_TRACK: `${BACKEND_URL}/api/track/start`,
   ADD_WAYPOINT: (trackUuid: string) => `${BACKEND_URL}/api/track/${trackUuid}/waypoint`,
+  BATCH_WAYPOINTS: (trackUuid: string) => `${BACKEND_URL}/api/track/${trackUuid}/waypoints/batch`,
   COMPLETE_TRACK: (trackUuid: string) => `${BACKEND_URL}/api/track/${trackUuid}/complete`,
   ADD_COMMENT: (trackUuid: string) => `${BACKEND_URL}/api/track/${trackUuid}/comment`,
 };

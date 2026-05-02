@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,10 @@ import {
   ScrollView,
   Alert,
   Platform,
-  Dimensions,
   TextInput,
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import MapView, { Polyline, Marker } from 'react-native-maps';
 import {
   exportToKML,
   exportToGPX,
@@ -33,7 +31,6 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
 
   const [comment, setComment] = useState('');
   const [commentSubmitted, setCommentSubmitted] = useState(false);
-  const [mapError, setMapError] = useState(false);
 
   const distance = getTotalDistance();
   const duration = getRecordingDuration();
@@ -41,12 +38,12 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
   const waypointCount = waypoints.length;
 
   const handleOpenWebDashboard = async () => {
-    if (!trackId) {
+    if (!trackUuid) {
       Alert.alert('Errore', 'ID traccia non disponibile per la visualizzazione web.');
       return;
     }
 
-    const url = `${BACKEND_URL}/track/${trackId}`;
+    const url = `${BACKEND_URL}/track/${trackUuid}`;
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
@@ -85,83 +82,6 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
       Alert.alert('Errore', 'Errore durante il salvataggio del commento.');
     }
   };
-
-  // Calcola la regione della mappa e il percorso
-  const { mapRegion, displayPoints, startCoordinate, endCoordinate } = useMemo(() => {
-    try {
-      if (!waypoints || waypoints.length === 0) {
-        return {
-          mapRegion: {
-            latitude: 45.4642,
-            longitude: 9.19,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          },
-          displayPoints: [],
-          startCoordinate: null,
-          endCoordinate: null,
-        };
-      }
-
-      const points = waypoints
-        .filter(wp => wp && typeof wp.latitude === 'number' && typeof wp.longitude === 'number')
-        .map(wp => ({
-          latitude: wp.latitude,
-          longitude: wp.longitude,
-        }));
-
-      if (points.length === 0) {
-        throw new Error('No valid points');
-      }
-
-      // Downsample points for map visualization if there are too many
-      const maxMapPoints = 1000;
-      let dPoints = points;
-      if (points.length > maxMapPoints) {
-        const step = Math.ceil(points.length / maxMapPoints);
-        dPoints = points.filter((_, index) => index % step === 0);
-        if (dPoints[dPoints.length - 1] !== points[points.length - 1]) {
-          dPoints.push(points[points.length - 1]);
-        }
-      }
-
-      let minLat = points[0].latitude;
-      let maxLat = points[0].latitude;
-      let minLon = points[0].longitude;
-      let maxLon = points[0].longitude;
-
-      for (let i = 1; i < points.length; i++) {
-        const wp = points[i];
-        if (wp.latitude < minLat) minLat = wp.latitude;
-        if (wp.latitude > maxLat) maxLat = wp.latitude;
-        if (wp.longitude < minLon) minLon = wp.longitude;
-        if (wp.longitude > maxLon) maxLon = wp.longitude;
-      }
-
-      const latPadding = (maxLat - minLat) * 0.2 || 0.005;
-      const lonPadding = (maxLon - minLon) * 0.2 || 0.005;
-
-      return {
-        mapRegion: {
-          latitude: (minLat + maxLat) / 2,
-          longitude: (minLon + maxLon) / 2,
-          latitudeDelta: Math.max(latPadding * 2, 0.005),
-          longitudeDelta: Math.max(lonPadding * 2, 0.005),
-        },
-        displayPoints: dPoints,
-        startCoordinate: points[0],
-        endCoordinate: points[points.length - 1],
-      };
-    } catch (e) {
-      console.error('Error calculating map data:', e);
-      return {
-        mapRegion: { latitude: 0, longitude: 0, latitudeDelta: 0.01, longitudeDelta: 0.01 },
-        displayPoints: [],
-        startCoordinate: null,
-        endCoordinate: null
-      };
-    }
-  }, [waypoints]);
 
   const handleExportKML = async () => {
     if (waypointCount === 0) {
@@ -237,72 +157,14 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Mappa del percorso (DISABILITATA PER DEBUG) */}
-        {false && waypointCount > 0 && !mapError && (
-          <View style={styles.mapContainer}>
-            <MapView
-              style={styles.map}
-              region={mapRegion}
-              showsUserLocation={false}
-              showsCompass={true}
-              showsScale={true}
-              scrollEnabled={true}
-              zoomEnabled={true}
-              rotateEnabled={false}
-              pitchEnabled={false}
-              onError={(error) => {
-                console.error('MapView Error:', error);
-                setMapError(true);
-              }}
-            >
-              {/* Linea del percorso */}
-              {displayPoints.length >= 2 && (
-                <Polyline
-                  coordinates={displayPoints}
-                  strokeColor="#4CAF50"
-                  strokeWidth={4}
-                  lineCap="round"
-                  lineJoin="round"
-                />
-              )}
-
-              {/* Marker di inizio */}
-              {startCoordinate && (
-                <Marker
-                  coordinate={startCoordinate}
-                  title="Inizio"
-                  description="Punto di partenza"
-                />
-              )}
-
-              {/* Marker di fine */}
-              {endCoordinate && displayPoints.length > 1 && (
-                <Marker
-                  coordinate={endCoordinate}
-                  title="Fine"
-                  description="Punto di arrivo"
-                />
-              )}
-            </MapView>
-          </View>
-        )}
-
         <View style={[styles.mapContainer, { backgroundColor: '#e8f5e9', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
             <Text style={{ fontSize: 16, textAlign: 'center', color: '#2E7D32', fontWeight: 'bold' }}>
               📍 Traccia registrata con successo!{'\n'}
               <Text style={{ fontSize: 13, fontWeight: 'normal', color: '#666' }}>
-                (Mappa temporaneamente disabilitata per test di stabilità)
+                (Visualizzazione mappa disponibile sulla dashboard web)
               </Text>
             </Text>
         </View>
-
-        {mapError && (
-          <View style={[styles.mapContainer, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
-            <Text style={{ fontSize: 16, textAlign: 'center', color: '#666' }}>
-              ⚠️ Impossibile caricare la mappa.{'\n'}Controlla la chiave API di Google Maps.
-            </Text>
-          </View>
-        )}
 
         {/* Hero stats */}
         <View style={styles.heroStats}>
@@ -336,7 +198,7 @@ export default function SummaryScreen({ onReset = () => {} }: SummaryScreenProps
         </View>
 
         {/* Web Dashboard Link */}
-        {trackId && (
+        {trackUuid && (
           <View style={styles.webDashboardSection}>
             <TouchableOpacity
               style={styles.webDashboardButton}
@@ -472,7 +334,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    height: 250,
+    height: 100,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -484,10 +346,6 @@ const styles = StyleSheet.create({
         elevation: 5,
       },
     }),
-  },
-  map: {
-    width: '100%',
-    height: '100%',
   },
   heroIcon: {
     fontSize: 40,

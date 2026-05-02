@@ -18,8 +18,7 @@
         "NSLocationAlwaysUsageDescription": "Questa app ha bisogno di accedere alla tua posizione anche in background per registrare la traccia GPS completa.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Questa app ha bisogno di accedere alla tua posizione sia in primo piano che in background per registrare la traccia GPS.",
         "UIBackgroundModes": [
-          "location",
-          "fetch"
+          "location"
         ]
       }
     },
@@ -38,12 +37,7 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_TYPE_LOCATION"
       ],
-      "package": "com.gpstrackrecorder.app",
-      "config": {
-        "googleMaps": {
-          "apiKey": "PUT_YOUR_GOOGLE_MAPS_API_KEY_HERE"
-        }
-      }
+      "package": "com.gpstrackrecorder.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
