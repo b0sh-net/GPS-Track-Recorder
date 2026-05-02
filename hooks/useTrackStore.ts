@@ -89,16 +89,20 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     try {
       console.log('useTrackStore - Starting background location updates');
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 3000,
-        distanceInterval: 10,
+        accuracy: Location.Accuracy.Highest, // Massima precisione per evitare sospensioni
+        timeInterval: 2000,
+        distanceInterval: 5, // Ridotto per essere più sensibile al movimento
         // Android specific options
         foregroundService: {
           notificationTitle: 'Registrazione GPS attiva',
-          notificationBody: 'L\'app sta registrando il tuo percorso in background.',
+          notificationBody: 'L\'app sta registrando il tuo percorso.',
           notificationColor: '#4CAF50',
+          killServiceOnStop: false, // Mantieni il servizio vivo se l'app viene chiusa
         },
         pausesLocationUpdatesAutomatically: false,
+        showsBackgroundLocationIndicator: true, // Importante per iOS
+        deferredUpdatesInterval: 0,
+        deferredUpdatesDistance: 0,
       });
     } catch (error) {
       console.error('Failed to start background location updates:', error);
