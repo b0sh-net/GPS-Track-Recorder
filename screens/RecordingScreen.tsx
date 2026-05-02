@@ -71,21 +71,9 @@ export default function RecordingScreen({ onStopRecording = () => {} }: Recordin
     );
   };
 
-  // Aggiorna waypoint quando riceve nuova posizione
-  useEffect(() => {
-    if (location && isRecording) {
-      const waypoint: LocationData = {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        timestamp: location.timestamp,
-        altitude: location.altitude,
-        heading: location.heading,
-        speed: location.speed,
-      };
-      addWaypoint(waypoint);
-    }
-  }, [location, isRecording, addWaypoint]);
+  // La posizione viene aggiornata tramite BACKGROUND_LOCATION_TASK definito in locationTask.ts
+  // che interagisce direttamente con useTrackStore.
+  // Non è più necessario aggiungere waypoint manualmente qui.
 
   return (
     <View style={styles.container}>

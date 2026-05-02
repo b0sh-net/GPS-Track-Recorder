@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import * as Location from 'expo-location';
 import { LocationData } from '../hooks/useLocation';
 import { calculateTotalDistance } from '../lib/gpsUtils';
 import { startTrack, addWaypoint as sendWaypointToBackend, completeTrack } from '../services/backendApi';
+import { BACKGROUND_LOCATION_TASK } from '../services/locationTask';
 
 type RecordingState = {
   isRecording: boolean;
@@ -40,6 +42,22 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
   startRecording: async () => {
     console.log('useTrackStore - startRecording called');
     
+    // Richiesta permessi prima di iniziare
+    try {
+      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+      if (foregroundStatus !== 'granted') {
+        console.warn('Foreground location permission denied');
+        return;
+      }
+
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus !== 'granted') {
+        console.warn('Background location permission denied');
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    }
+
     // Start track on backend
     let trackUuid = null;
     let trackId = null;
@@ -66,11 +84,38 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       trackId,
       waypointSequence: 0,
     });
+
+    // Avvia il tracking in background
+    try {
+      console.log('useTrackStore - Starting background location updates');
+      await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 3000,
+        distanceInterval: 10,
+        // Android specific options
+        foregroundService: {
+          notificationTitle: 'Registrazione GPS attiva',
+          notificationBody: 'L\'app sta registrando il tuo percorso in background.',
+          notificationColor: '#4CAF50',
+        },
+        pausesLocationUpdatesAutomatically: false,
+      });
+    } catch (error) {
+      console.error('Failed to start background location updates:', error);
+    }
   },
 
   stopRecording: async () => {
     console.log('useTrackStore - stopRecording called');
     const { waypoints, startTime, trackUuid, syncWithBackend } = get();
+
+    // Ferma il tracking in background
+    try {
+      console.log('useTrackStore - Stopping background location updates');
+      await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    } catch (error) {
+      console.error('Failed to stop background location updates:', error);
+    }
 
     // Calcola e salva durata e velocità media finali
     const duration = startTime ? Date.now() - startTime : 0;
