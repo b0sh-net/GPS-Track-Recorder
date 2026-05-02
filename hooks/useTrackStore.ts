@@ -177,68 +177,60 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     });
   },
 
-  addWaypoint: async (waypoint) => {
-    console.log('useTrackStore - addWaypoint called', waypoint);
+  addWaypoint: (waypoint) => {
     const { isRecording, waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
     
-    // Defensive check: don't add waypoints if not recording
-    if (!isRecording) {
-      console.log('useTrackStore - addWaypoint called while not recording, ignoring');
-      return;
-    }
+    if (!isRecording) return;
 
-    // Cap array to prevent memory issues on long recordings
+    // Aggiornamento locale immediato per reattività UI
     const newWaypoints = waypoints.length > 10000
       ? [...waypoints.slice(-8000), waypoint]
       : [...waypoints, waypoint];
     
-    // Send waypoint to backend
-    if (syncWithBackend && trackUuid) {
-      try {
-        await sendWaypointToBackend(trackUuid, waypoint, waypointSequence);
-      } catch (error) {
-        console.error('Failed to send waypoint to backend:', error);
-      }
-    }
-
     set({ 
       waypoints: newWaypoints,
       waypointSequence: waypointSequence + 1,
     });
+
+    // Sincronizzazione backend non bloccante
+    if (syncWithBackend && trackUuid) {
+      sendWaypointToBackend(trackUuid, waypoint, waypointSequence).catch(err => {
+        console.error('Failed to sync waypoint (non-blocking):', err);
+      });
+    }
   },
 
   addWaypoints: async (newWaypointsBatch) => {
-    console.log(`useTrackStore - addWaypoints called with ${newWaypointsBatch.length} points`);
     const { isRecording, waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
 
     if (!isRecording || newWaypointsBatch.length === 0) {
       return;
     }
 
-    // Prepariamo i waypoint con i loro numeri di sequenza
+    console.log(`useTrackStore - Adding ${newWaypointsBatch.length} waypoints`);
+
+    // Prepariamo i dati per il backend
     const waypointsWithSequence = newWaypointsBatch.map((wp, index) => ({
       location: wp,
       sequence: waypointSequence + index
     }));
 
-    // Aggiorniamo lo stato locale
+    // Aggiornamento locale immediato
     const combinedWaypoints = waypoints.length + newWaypointsBatch.length > 10000
       ? [...waypoints.slice(-(8000 - newWaypointsBatch.length)), ...newWaypointsBatch]
       : [...waypoints, ...newWaypointsBatch];
-
-    // Invia al backend in batch
-    if (syncWithBackend && trackUuid) {
-      try {
-        await batchWaypoints(trackUuid, waypointsWithSequence);
-      } catch (error) {
-        console.error('Failed to send batch waypoints to backend:', error);
-      }
-    }
 
     set({
       waypoints: combinedWaypoints,
       waypointSequence: waypointSequence + newWaypointsBatch.length,
     });
+
+    // Sincronizzazione backend in batch (non bloccante per lo store)
+    if (syncWithBackend && trackUuid) {
+      batchWaypoints(trackUuid, waypointsWithSequence).catch(err => {
+        console.error('Failed to sync batch waypoints (non-blocking):', err);
+      });
+    }
   },
 
   clearWaypoints: () => {

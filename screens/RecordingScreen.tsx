@@ -54,6 +54,24 @@ export default function RecordingScreen({ onStopRecording = () => {} }: Recordin
   const distance = getTotalDistance();
   const speed = getAverageSpeed();
 
+  // Aggiunge i waypoint in tempo reale quando l'app è in primo piano.
+  // Questo garantisce che la registrazione sia fluida anche se il task in background
+  // ha intervalli meno frequenti mentre l'app è attiva.
+  useEffect(() => {
+    if (isRecording && location) {
+      // Evitiamo di aggiungere lo stesso punto se è identico all'ultimo registrato (stesso timestamp o coordinate)
+      const lastWaypoint = waypoints[waypoints.length - 1];
+      const isDuplicate = lastWaypoint && 
+        (lastWaypoint.timestamp === location.timestamp || 
+         (lastWaypoint.latitude === location.latitude && lastWaypoint.longitude === location.longitude));
+      
+      if (!isDuplicate) {
+        console.log('RecordingScreen - Adding foreground waypoint');
+        addWaypoint(location);
+      }
+    }
+  }, [location, isRecording]);
+
   const handleStopRecording = () => {
     console.log('Handle stop recording called in screen');
     // Just notify App to handle the stop logic
