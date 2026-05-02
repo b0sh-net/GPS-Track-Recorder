@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as Location from 'expo-location';
 import { LocationData } from '../hooks/useLocation';
 import { calculateTotalDistance } from '../lib/gpsUtils';
-import { startTrack, addWaypoint as sendWaypointToBackend, completeTrack } from '../services/backendApi';
+import { startTrack, addWaypoint as sendWaypointToBackend, batchWaypoints, completeTrack } from '../services/backendApi';
 import { BACKGROUND_LOCATION_TASK } from '../services/locationTask';
 
 type RecordingState = {
