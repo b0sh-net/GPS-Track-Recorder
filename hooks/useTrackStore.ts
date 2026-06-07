@@ -3,7 +3,9 @@ import * as Location from 'expo-location';
 import { LocationData } from '../hooks/useLocation';
 import { calculateTotalDistance } from '../lib/gpsUtils';
 import { startTrack, addWaypoint as sendWaypointToBackend, batchWaypoints, completeTrack } from '../services/backendApi';
-import { BACKGROUND_LOCATION_TASK } from '../services/locationTask';
+import { saveRecordingState, loadRecordingState, clearRecordingState } from '../lib/storageUtils';
+
+const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
 type RecordingState = {
   isRecording: boolean;
@@ -22,6 +24,8 @@ type Action = {
   stopRecording: () => Promise<void>;
   reset: () => void;
   addWaypoint: (waypoint: LocationData) => void;
+  addWaypoints: (waypoints: LocationData[]) => Promise<void>;
+  loadPersistedState: () => Promise<void>;
   getRecordingDuration: () => number;
   getTotalDistance: () => number;
   getAverageSpeed: () => number;
@@ -74,15 +78,26 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       }
     }
 
+    const now = Date.now();
     set({
       isRecording: true,
       waypoints: [],
-      startTime: Date.now(),
+      startTime: now,
       finalDuration: null,
       finalAverageSpeed: null,
       trackUuid,
       trackId,
       waypointSequence: 0,
+    });
+
+    // Salva lo stato iniziale persistito su disco
+    await saveRecordingState({
+      isRecording: true,
+      trackUuid,
+      trackId,
+      startTime: now,
+      waypointSequence: 0,
+      waypoints: [],
     });
 
     // Avvia il tracking in background
@@ -97,9 +112,9 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
           notificationTitle: 'Registrazione GPS attiva',
           notificationBody: 'L\'app sta registrando il tuo percorso.',
           notificationColor: '#4CAF50',
-          killServiceOnStop: false, // Mantieni il servizio vivo se l'app viene chiusa
+          killServiceOnDestroy: false, // Mantieni il servizio vivo se l'app viene chiusa
         },
-        pausesLocationUpdatesAutomatically: false,
+        pausesUpdatesAutomatically: false,
         showsBackgroundLocationIndicator: true, // Importante per iOS
         deferredUpdatesInterval: 0,
         deferredUpdatesDistance: 0,
@@ -116,6 +131,9 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     // Imposta immediatamente lo stato di registrazione a false per evitare race condition
     // con il background task che potrebbe aggiungere waypoint mentre stiamo chiudendo
     set({ isRecording: false });
+
+    // Cancella lo stato persistito su disco
+    await clearRecordingState();
 
     // Ferma il tracking in background
     try {
@@ -169,6 +187,7 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
 
   reset: () => {
     console.log('useTrackStore - reset called');
+    clearRecordingState().catch(err => console.error('Failed to clear persisted state on reset:', err));
     set({
       isRecording: false,
       waypoints: [],
@@ -181,7 +200,7 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     });
   },
 
-  addWaypoint: (waypoint) => {
+  addWaypoint: (waypoint: LocationData) => {
     const { isRecording, waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
     
     if (!isRecording) return;
@@ -191,10 +210,21 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       ? [...waypoints.slice(-8000), waypoint]
       : [...waypoints, waypoint];
     
+    const nextSequence = waypointSequence + 1;
     set({ 
       waypoints: newWaypoints,
-      waypointSequence: waypointSequence + 1,
+      waypointSequence: nextSequence,
     });
+
+    // Persisti lo stato aggiornato su disco in modo asincrono
+    saveRecordingState({
+      isRecording: true,
+      trackUuid,
+      trackId: get().trackId,
+      startTime: get().startTime,
+      waypointSequence: nextSequence,
+      waypoints: newWaypoints,
+    }).catch(err => console.error('Failed to persist waypoint:', err));
 
     // Sincronizzazione backend non bloccante
     if (syncWithBackend && trackUuid) {
@@ -204,7 +234,7 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     }
   },
 
-  addWaypoints: async (newWaypointsBatch) => {
+  addWaypoints: async (newWaypointsBatch: LocationData[]) => {
     const { isRecording, waypoints, trackUuid, waypointSequence, syncWithBackend } = get();
 
     if (!isRecording || newWaypointsBatch.length === 0) {
@@ -214,7 +244,7 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
     console.log(`useTrackStore - Adding ${newWaypointsBatch.length} waypoints`);
 
     // Prepariamo i dati per il backend
-    const waypointsWithSequence = newWaypointsBatch.map((wp, index) => ({
+    const waypointsWithSequence = newWaypointsBatch.map((wp: LocationData, index: number) => ({
       location: wp,
       sequence: waypointSequence + index
     }));
@@ -224,15 +254,45 @@ const useTrackStore = create<RecordingState & Action>((set, get) => ({
       ? [...waypoints.slice(-(8000 - newWaypointsBatch.length)), ...newWaypointsBatch]
       : [...waypoints, ...newWaypointsBatch];
 
+    const nextSequence = waypointSequence + newWaypointsBatch.length;
     set({
       waypoints: combinedWaypoints,
-      waypointSequence: waypointSequence + newWaypointsBatch.length,
+      waypointSequence: nextSequence,
     });
+
+    // Persisti lo stato aggiornato su disco
+    await saveRecordingState({
+      isRecording: true,
+      trackUuid,
+      trackId: get().trackId,
+      startTime: get().startTime,
+      waypointSequence: nextSequence,
+      waypoints: combinedWaypoints,
+    }).catch(err => console.error('Failed to persist batch waypoints:', err));
 
     // Sincronizzazione backend in batch (non bloccante per lo store)
     if (syncWithBackend && trackUuid) {
       batchWaypoints(trackUuid, waypointsWithSequence).catch(err => {
         console.error('Failed to sync batch waypoints (non-blocking):', err);
+      });
+    }
+  },
+
+  loadPersistedState: async () => {
+    console.log('useTrackStore - loadPersistedState called');
+    const persisted = await loadRecordingState();
+    if (persisted && persisted.isRecording) {
+      console.log('useTrackStore - Restoring persisted recording state', {
+        trackUuid: persisted.trackUuid,
+        waypointsCount: persisted.waypoints.length
+      });
+      set({
+        isRecording: persisted.isRecording,
+        trackUuid: persisted.trackUuid,
+        trackId: persisted.trackId,
+        startTime: persisted.startTime,
+        waypointSequence: persisted.waypointSequence,
+        waypoints: persisted.waypoints,
       });
     }
   },

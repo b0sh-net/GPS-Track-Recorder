@@ -2,7 +2,7 @@
   "expo": {
     "name": "GPS-Track-Recorder",
     "slug": "GPS-Track-Recorder",
-    "version": "0.5.3",
+    "version": "0.6.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -35,13 +35,23 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_TYPE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION"
       ],
       "package": "com.gpstrackrecorder.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "766c637a-151a-4ea6-b83c-9b4177667e30"

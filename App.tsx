@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, AppState, AppStateStatus } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from './screens/HomeScreen';
 import RecordingScreen from './screens/RecordingScreen';
@@ -13,7 +13,7 @@ export default function App() {
   const { isRecording } = useTrackStore();
   const { error } = useLocation();
 
-  // Registrazione dispositivo all'avvio
+  // Registrazione dispositivo all'avvio e recupero dello stato persistito
   useEffect(() => {
     const initApp = async () => {
       try {
@@ -21,16 +21,47 @@ export default function App() {
         const result = await registerDevice();
         if (result.success) {
           console.log('App - Device registered successfully');
-          // Dispatch a custom event or just let screens handle their own init
         } else {
           console.warn('App - Device registration failed (check backend)');
         }
       } catch (err) {
         console.error('App - Error during initialization:', err);
       }
+
+      try {
+        console.log('App - Loading persisted state on launch...');
+        await useTrackStore.getState().loadPersistedState();
+        const state = useTrackStore.getState();
+        if (state.isRecording) {
+          console.log('App - Restored recording screen from persisted state');
+          setScreen('recording');
+        }
+      } catch (err) {
+        console.error('App - Error loading persisted state:', err);
+      }
     };
     
     initApp();
+  }, []);
+
+  // Ascolta i cambiamenti di stato dell'app per sincronizzare lo store con i waypoint registrati in background
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      console.log('App - AppState changed to:', nextAppState);
+      if (nextAppState === 'active') {
+        const { isRecording, loadPersistedState } = useTrackStore.getState();
+        if (isRecording) {
+          console.log('App - App became active, reloading persisted state');
+          await loadPersistedState();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   // Log per debug
